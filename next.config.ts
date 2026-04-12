@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    allowedDevOrigins: [
+      "192.168.18.10",
+      "imported-moreover-orlando-toner.trycloudflare.com"
+    ],
+  },
   async headers() {
     return [
       {
