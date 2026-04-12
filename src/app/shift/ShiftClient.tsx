@@ -177,9 +177,10 @@ export default function ShiftClient({
   if (!activeShift) {
     return (
       <button
+        type="button"
         onClick={handleOpenShift}
         disabled={loading}
-        className="w-full py-4 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold text-lg active:scale-95 transition-all disabled:opacity-50"
+        className="w-full py-4 bg-primary hover:bg-primary-dark text-white rounded-xl font-bold text-lg active:scale-95 transition-all disabled:opacity-50 cursor-pointer touch-manipulation shadow-lg"
       >
         {loading ? "Membuka Sesi..." : "🚀 MULAI SIKLUS SHIFT SEKARANG"}
       </button>
@@ -201,8 +202,9 @@ export default function ShiftClient({
           <p className="text-xs text-foreground-muted">Command Center Mesin</p>
         </div>
         <button
+          type="button"
           onClick={() => setIsClosingModalOpen(true)}
-          className="px-4 py-2 bg-danger text-white text-sm font-bold rounded-xl active:scale-95 transition-transform shadow-sm flex items-center gap-1"
+          className="px-4 py-2 bg-danger text-white text-sm font-bold rounded-xl active:scale-95 transition-transform shadow-sm flex items-center gap-1 cursor-pointer touch-manipulation"
         >
           <LogOut className="w-4 h-4" /> Tutup Shift
         </button>
@@ -388,8 +390,9 @@ export default function ShiftClient({
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-surface w-full max-w-sm rounded-2xl p-6 shadow-xl relative animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
             <button
+              type="button"
               onClick={() => setIsClosingModalOpen(false)}
-              className="absolute top-4 right-4 text-foreground-muted hover:text-danger bg-background rounded-full p-1 border border-border"
+              className="absolute top-4 right-4 text-foreground-muted hover:text-danger bg-background rounded-full p-2 border border-border cursor-pointer touch-manipulation z-[60]"
             >
               <X className="w-5 h-5" />
             </button>

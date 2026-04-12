@@ -104,36 +104,48 @@ ${machineDetailsText}
 
 _Laporan di-Buat secara otomatis oleh Sistem._`;
 
-    // Fallback khusus untuk iOS Chrome dan Local Network (HTTP) di mana navigator.clipboard dinonaktifkan
+    // --- IOS SAFARI COMPATIBILITY FIX ---
+    // Safari requires clipboard access to be strictly synchronous with user activation.
+    // If the browser supports navigator.clipboard and we are in a secure context:
     if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(text).then(() => {
-        alert("Berhasil disalin ke Clipboard! Silakan paste di WhatsApp.");
-      }).catch((err) => alert("Gagal menyalin: " + err));
-    } else {
-      // Teknik jadul (Legacy) textArea select untuk Mobile WebKit
-      const textArea = document.createElement("textarea");
-      textArea.value = text;
-      textArea.style.position = "fixed";  // Hindari loncatan layar (scroll)
-      textArea.style.top = "0";
-      textArea.style.left = "0";
-      textArea.style.opacity = "0";
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-
-      try {
-        const successful = document.execCommand('copy');
-        if (successful) {
+      navigator.clipboard.writeText(text)
+        .then(() => {
           alert("Berhasil disalin ke Clipboard! Silakan paste di WhatsApp.");
-        } else {
-          alert("Browser iOS memblokir akses clipboard. Silakan copy manual.");
-        }
-      } catch (err) {
-        alert("Gagal menyalin lewat eksekusi manual: " + err);
-      }
-
-      document.body.removeChild(textArea);
+        })
+        .catch((err) => {
+          console.error("Async Copy failed, trying fallback...", err);
+          // Fallback if async fails
+          fallbackCopy(text);
+        });
+    } else {
+      fallbackCopy(text);
     }
+  };
+
+  const fallbackCopy = (text: string) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-9999px";
+    textArea.style.top = "0";
+    document.body.appendChild(textArea);
+    
+    // Khusus iOS: Select dan Set Selection Range
+    textArea.focus();
+    textArea.setSelectionRange(0, 99999);
+    textArea.select();
+
+    try {
+      const successful = document.execCommand('copy');
+      if (successful) {
+        alert("Berhasil disalin ke Clipboard! Silakan paste di WhatsApp.");
+      } else {
+        alert("Gagal menyalin. Silakan coba tekan tombol lagi atau salin manual.");
+      }
+    } catch (err) {
+      alert("Error saat menyalin: " + err);
+    }
+    document.body.removeChild(textArea);
   };
 
   const wktBuka = parseWkt(shift.date_opened);
@@ -166,15 +178,17 @@ _Laporan di-Buat secara otomatis oleh Sistem._`;
 
           <div className="grid grid-cols-2 gap-3">
             <button
+              type="button"
               onClick={() => window.print()}
-              className="py-4 bg-blue-600 text-white font-bold rounded-xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-all shadow-sm"
+              className="py-4 bg-blue-600 text-white font-bold rounded-xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-all shadow-sm cursor-pointer touch-manipulation"
             >
               <Printer className="w-6 h-6" />
               <span>Cetak A4 / PDF</span>
             </button>
             <button
+              type="button"
               onClick={handleCopyWA}
-              className="py-4 bg-emerald-600 text-white font-bold rounded-xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-all shadow-sm"
+              className="py-4 bg-emerald-600 text-white font-bold rounded-xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-all shadow-sm cursor-pointer touch-manipulation"
             >
               <Copy className="w-6 h-6" />
               <span>Copy WA Laporan</span>
