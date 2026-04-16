@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { closeShift } from "@/actions/shift";
 import { useRouter } from "next/navigation";
-import { Printer, Copy, CheckCircle, AlertTriangle } from "lucide-react";
+import { Printer, Copy, CheckCircle, AlertTriangle, Check } from "lucide-react";
 
 // Helper konversi format SQLite UTC ke Timezone WIB Indonesia (Format 24 Jam)
 function parseWkt(dbDate: string | null) {
@@ -27,6 +27,7 @@ export default function SummaryClient({
   operators: any[];
 }) {
   const router = useRouter();
+  const [copyStatus, setCopyStatus] = useState<"idle" | "success" | "error">("idle");
 
   // Kalkulasi Otomatis berdasarkan yang sudah tersimpan di DB
   const bahanBakuSak = shift.bahan_baku_a_karung || 0;
@@ -72,6 +73,11 @@ export default function SummaryClient({
     });
   }
 
+  const showCopyFeedback = (status: "success" | "error") => {
+    setCopyStatus(status);
+    setTimeout(() => setCopyStatus("idle"), 3000); // Reset after 3 seconds
+  };
+
   const handleCopyWA = () => {
     // Parsing Aman dengan Helper baru Timezone WIB
     const wkt = parseWkt(shift.date_opened);
@@ -106,15 +112,11 @@ _Laporan di-Buat secara otomatis oleh Sistem._`;
 
     // --- IOS SAFARI COMPATIBILITY FIX ---
     // Safari requires clipboard access to be strictly synchronous with user activation.
-    // If the browser supports navigator.clipboard and we are in a secure context:
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(text)
-        .then(() => {
-          alert("Berhasil disalin ke Clipboard! Silakan paste di WhatsApp.");
-        })
+        .then(() => showCopyFeedback("success"))
         .catch((err) => {
           console.error("Async Copy failed, trying fallback...", err);
-          // Fallback if async fails
           fallbackCopy(text);
         });
     } else {
@@ -138,12 +140,12 @@ _Laporan di-Buat secara otomatis oleh Sistem._`;
     try {
       const successful = document.execCommand('copy');
       if (successful) {
-        alert("Berhasil disalin ke Clipboard! Silakan paste di WhatsApp.");
+        showCopyFeedback("success");
       } else {
-        alert("Gagal menyalin. Silakan coba tekan tombol lagi atau salin manual.");
+        showCopyFeedback("error");
       }
     } catch (err) {
-      alert("Error saat menyalin: " + err);
+      showCopyFeedback("error");
     }
     document.body.removeChild(textArea);
   };
@@ -188,10 +190,18 @@ _Laporan di-Buat secara otomatis oleh Sistem._`;
             <button
               type="button"
               onClick={handleCopyWA}
-              className="py-4 bg-emerald-600 text-white font-bold rounded-xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-all shadow-sm cursor-pointer touch-manipulation"
+              className={`py-4 font-bold rounded-xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-all shadow-sm cursor-pointer touch-manipulation ${
+                copyStatus === "success" ? "bg-emerald-500 text-white" :
+                copyStatus === "error" ? "bg-red-500 text-white" :
+                "bg-emerald-600 text-white"
+              }`}
             >
-              <Copy className="w-6 h-6" />
-              <span>Copy WA Laporan</span>
+              {copyStatus === "success" ? <Check className="w-6 h-6 animate-pulse" /> : <Copy className="w-6 h-6" />}
+              <span>
+                {copyStatus === "success" ? "Berhasil Disalin!" :
+                 copyStatus === "error" ? "Gagal Menyalin" :
+                 "Copy WA Laporan"}
+              </span>
             </button>
           </div>
         </div>
