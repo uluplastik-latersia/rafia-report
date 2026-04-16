@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useTransition } from "react";
 import { openShift } from "@/actions/shift";
 import { submitRoll, deleteRoll } from "@/actions/inbound";
 import { upsertMachineWaste } from "@/actions/waste";
@@ -19,6 +19,7 @@ export default function ShiftClient({
   wastes: any[];
 }) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [loading, setLoading] = useState(false);
   const [activeMachine, setActiveMachine] = useState<number>(1);
 
@@ -165,7 +166,9 @@ export default function ShiftClient({
           karyawan: karyawan
         });
         setIsClosingModalOpen(false);
-        router.push(`/ringkasan/${activeShift.id}`);
+        startTransition(() => {
+          router.push(`/ringkasan/${activeShift.id}`);
+        });
       });
     } catch (err: any) {
       alert("Error: " + err.message);
@@ -468,10 +471,10 @@ export default function ShiftClient({
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || isPending}
                 className="w-full mt-4 py-4 bg-danger text-white font-bold rounded-xl active:scale-95 transition-all shadow-md"
               >
-                {loading ? "Memproses..." : "FINALISASI & TUTUP SHIFT"}
+                {loading || isPending ? "Memuat Halaman..." : "FINALISASI & TUTUP SHIFT"}
               </button>
             </form>
           </div>

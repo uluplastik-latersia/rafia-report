@@ -27,18 +27,18 @@ export async function submitRoll(data: {
   const rawWeight = data.weight_kg;
   const rollCode = `${rnd}-${rawWeight}-${data.operator_code}`;
 
-  // 1. Insert ke tabel rolls
-  await db.execute({
-    sql: `INSERT INTO rolls (id, roll_code, weight_kg, operator_code, machine_number, session_id, status)
-          VALUES (?, ?, ?, ?, ?, ?, 'IN_STOCK')`,
-    args: [rollId, rollCode, rawWeight, data.operator_code, data.machine_number, data.session_id],
-  });
-
-  // 2. Tambahkan ke stok global statis secara real-time
-  await db.execute({
-    sql: `UPDATE system_stats SET current_stock_kg = current_stock_kg + ? WHERE id = 1`,
-    args: [rawWeight],
-  });
+  // 1. Insert ke tabel rolls dan update stok dalam 1 Batch HTTP Request
+  await db.batch([
+    {
+      sql: `INSERT INTO rolls (id, roll_code, weight_kg, operator_code, machine_number, session_id, status)
+            VALUES (?, ?, ?, ?, ?, ?, 'IN_STOCK')`,
+      args: [rollId, rollCode, rawWeight, data.operator_code, data.machine_number, data.session_id],
+    },
+    {
+      sql: `UPDATE system_stats SET current_stock_kg = current_stock_kg + ? WHERE id = 1`,
+      args: [rawWeight],
+    }
+  ]);
 
   revalidatePath("/");
   revalidatePath("/shift");
@@ -57,17 +57,17 @@ export async function deleteRoll(rollId: string, weight_kg: number) {
     throw new Error("Roll tidak ditemukan atau sudah terjual!");
   }
 
-  // 1. Delete roll
-  await db.execute({
-    sql: `DELETE FROM rolls WHERE id = ?`,
-    args: [rollId],
-  });
-
-  // 2. Kurangi stok global (rollback real-time stock)
-  await db.execute({
-    sql: `UPDATE system_stats SET current_stock_kg = current_stock_kg - ? WHERE id = 1`,
-    args: [weight_kg],
-  });
+  // 1. Delete roll dan 2. Kurangi stok global (rollback real-time stock) dalam 1 Batch
+  await db.batch([
+    {
+      sql: `DELETE FROM rolls WHERE id = ?`,
+      args: [rollId],
+    },
+    {
+      sql: `UPDATE system_stats SET current_stock_kg = current_stock_kg - ? WHERE id = 1`,
+      args: [weight_kg],
+    }
+  ]);
 
   revalidatePath("/");
   revalidatePath("/shift");

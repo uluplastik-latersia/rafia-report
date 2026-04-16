@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { tutupBukuBulanan } from "@/actions/closure";
 import { BookCheck, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 export default function CloseBookButton({ currentMonthYear }: { currentMonthYear: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
   // Helper untuk mendapatkan nama bulan
@@ -29,7 +30,9 @@ export default function CloseBookButton({ currentMonthYear }: { currentMonthYear
       const res = await tutupBukuBulanan();
       if (res.success) {
         setIsOpen(false);
-        router.refresh(); // Refresh halaman agar data terbaru termuat
+        startTransition(() => {
+          router.refresh(); // Refresh halaman agar data terbaru termuat
+        });
       }
     } catch (err: any) {
       alert("Error: " + err.message);
@@ -67,10 +70,10 @@ export default function CloseBookButton({ currentMonthYear }: { currentMonthYear
               <div className="flex flex-col w-full gap-2 mt-2">
                 <button 
                   onClick={handleTutupBuku}
-                  disabled={loading}
+                  disabled={loading || isPending}
                   className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl active:scale-[0.98] transition-all disabled:opacity-50"
                 >
-                  {loading ? "Memproses..." : "Ya, Tutup Buku Sekarang"}
+                  {loading || isPending ? "Memproses..." : "Ya, Tutup Buku Sekarang"}
                 </button>
                 <button 
                   onClick={() => setIsOpen(false)}

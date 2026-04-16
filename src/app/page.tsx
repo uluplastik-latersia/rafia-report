@@ -7,8 +7,13 @@ import CloseBookButton from "./CloseBookButton";
 export const dynamic = "force-dynamic";
 
 export default async function Dashboard() {
-  // Fetch system stats
-  const statsRes = await db.execute("SELECT * FROM system_stats");
+  // Fetch all parallel queries inside a single Turso HTTP transaction for extreme speed
+  const [statsRes, rollsRes, sablonRes] = await db.batch([
+    "SELECT * FROM system_stats",
+    "SELECT count(*) as count FROM rolls WHERE status = 'IN_STOCK'",
+    "SELECT sisa_sablon_a_karung FROM shift_sessions WHERE status = 'CLOSED' ORDER BY date_closed DESC LIMIT 1"
+  ]);
+
   const stats: any = statsRes.rows[0] || { current_stock_kg: 0, current_hr_kg: 0 };
 
   // Parse date string for HR Bulanan based on system_stats
@@ -25,12 +30,10 @@ export default async function Dashboard() {
   };
   const currentMonthStr = getMonthName(stats.current_month_year);
 
-  // Fetch total rolls in stock
-  const rollsRes = await db.execute("SELECT count(*) as count FROM rolls WHERE status = 'IN_STOCK'");
+  // Parse total rolls in stock
   const totalRollsCount = rollsRes.rows[0]?.count || 0;
 
-  // Fetch sisa sablon A from last closed shift
-  const sablonRes = await db.execute("SELECT sisa_sablon_a_karung FROM shift_sessions WHERE status = 'CLOSED' ORDER BY date_closed DESC LIMIT 1");
+  // Parse sisa sablon A from last closed shift
   const sisaSablonKarung = Number(sablonRes.rows[0]?.sisa_sablon_a_karung || 0);
   const sisaSablonKg = sisaSablonKarung * 25;
 

@@ -9,8 +9,11 @@ export const dynamic = "force-dynamic";
 
 // Server component to fetch active shift state and pass to client component UI
 export default async function ShiftPageRoute() {
-  const activeShift = await getActiveShift();
-  const operators = await getOperators();
+  // Ambil Shift Aktif dan Operator secara bersamaan
+  const [activeShift, operators] = await Promise.all([
+    getActiveShift(),
+    getOperators()
+  ]);
 
   // Jika tidak ada shift aktif, tampilkan UI pembuka (Kondisi 1)
   if (!activeShift) {
@@ -42,8 +45,11 @@ export default async function ShiftPageRoute() {
   }
 
   // Kondisi 2: Shift Sedang Aktif
-  const rolls = await getSessionRolls(activeShift.id);
-  const wastes = await getSessionWastes(activeShift.id);
+  // Ambil data detail roll dan wastes secara serentak
+  const [rolls, wastes] = await Promise.all([
+    getSessionRolls(activeShift.id),
+    getSessionWastes(activeShift.id)
+  ]);
 
   return (
     <div className="pb-12 slide-in mt-6">

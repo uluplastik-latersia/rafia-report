@@ -69,36 +69,36 @@ export async function closeShift(
   });
   const shiftProductionKg = (statsRes.rows[0]?.total_kg as number) || 0;
 
-  // Tutup Sesi
-  await db.execute({
-    sql: `UPDATE shift_sessions 
-          SET status = 'CLOSED', 
-              date_closed = CURRENT_TIMESTAMP,
-              bahan_baku_a_karung = ?,
-              sisa_sablon_a_karung = ?,
-              pp_hijau_muda_kg = ?,
-              sapuan_kg = ?,
-              sapuan_kotor_kg = ?,
-              admin_name = ?,
-              jumlah_karyawan = ?
-          WHERE id = ?`,
-    args: [
-      data.bahanBaku, 
-      data.sisaSablon,
-      data.ppHijau, 
-      data.sapuan, 
-      data.sapuanKotor,
-      data.adminName, 
-      data.karyawan,
-      sessionId
-    ],
-  });
-
-  // HR Bulanan diupdate. Kita akumulasikan (HR saat ini + produksi shift ini)
-  await db.execute({
-    sql: `UPDATE system_stats SET current_hr_kg = current_hr_kg + ? WHERE id = 1`,
-    args: [shiftProductionKg]
-  });
+  // Jalankan kedua update secara serentak dalam satu transaksi BATCH
+  await db.batch([
+    {
+      sql: `UPDATE shift_sessions 
+            SET status = 'CLOSED', 
+                date_closed = CURRENT_TIMESTAMP,
+                bahan_baku_a_karung = ?,
+                sisa_sablon_a_karung = ?,
+                pp_hijau_muda_kg = ?,
+                sapuan_kg = ?,
+                sapuan_kotor_kg = ?,
+                admin_name = ?,
+                jumlah_karyawan = ?
+            WHERE id = ?`,
+      args: [
+        data.bahanBaku, 
+        data.sisaSablon,
+        data.ppHijau, 
+        data.sapuan, 
+        data.sapuanKotor,
+        data.adminName, 
+        data.karyawan,
+        sessionId
+      ]
+    },
+    {
+      sql: `UPDATE system_stats SET current_hr_kg = current_hr_kg + ? WHERE id = 1`,
+      args: [shiftProductionKg]
+    }
+  ]);
 
   revalidatePath("/");
   revalidatePath("/shift");

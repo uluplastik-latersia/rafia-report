@@ -85,17 +85,16 @@ export async function createSale(data: {
   }
 
   // Ambil data lengkap roll yang dipilih untuk validasi & kalkulasi
-  // Jalankan satu per satu agar kompatibel dengan semua versi libSQL
-  const fetchedRolls: { id: string; weight_kg: number; status: string }[] = [];
-  for (const id of rollIds) {
-    const res = await db.execute({
-      sql: `SELECT id, weight_kg, status FROM rolls WHERE id = ?`,
-      args: [id],
-    });
-    if (res.rows[0]) {
-      fetchedRolls.push(JSON.parse(JSON.stringify(res.rows[0])));
-    }
-  }
+  if (rollIds.length === 0) return { success: false };
+
+  // Fetch semua rolls secara sekaligus (1 query HTTP)
+  const placeHolders = rollIds.map(() => "?").join(",");
+  const fetchRes = await db.execute({
+    sql: `SELECT id, weight_kg, status FROM rolls WHERE id IN (${placeHolders})`,
+    args: rollIds,
+  });
+  
+  const fetchedRolls = fetchRes.rows.map((r) => JSON.parse(JSON.stringify(r)));
 
   // Validasi: semua harus IN_STOCK
   for (const r of fetchedRolls) {
@@ -109,8 +108,11 @@ export async function createSale(data: {
 
   const saleId = uuidv4();
 
+  // BATCH TRANSAKSI (Sangat Cepat! Menyatukan puluhuan query jadi 1 request Vercel -> Turso)
+  const batchStatements = [];
+
   // 1. Insert header surat jalan
-  await db.execute({
+  batchStatements.push({
     sql: `INSERT INTO sales (id, pic_name, buyer_name, nopol, total_weight_kg, total_rolls)
           VALUES (?, ?, ?, ?, ?, ?)`,
     args: [
@@ -123,27 +125,27 @@ export async function createSale(data: {
     ],
   });
 
-  // 2. Insert sale_items satu per satu
+  // 2. Insert sale_items satu per satu ke dalam batch
   for (const rollId of rollIds) {
-    await db.execute({
+    batchStatements.push({
       sql: `INSERT INTO sale_items (sale_id, roll_id) VALUES (?, ?)`,
       args: [saleId, rollId],
     });
-  }
-
-  // 3. Update status setiap roll menjadi SOLD satu per satu
-  for (const rollId of rollIds) {
-    await db.execute({
+    // 3. Update status roll ke SOLD di batch yg sama
+    batchStatements.push({
       sql: `UPDATE rolls SET status = 'SOLD' WHERE id = ?`,
       args: [rollId],
     });
   }
 
   // 4. Kurangi stok global real-time
-  await db.execute({
+  batchStatements.push({
     sql: `UPDATE system_stats SET current_stock_kg = current_stock_kg - ? WHERE id = 1`,
     args: [totalWeightKg],
   });
+
+  // Jalankan tembakan Batch
+  await db.batch(batchStatements);
 
   revalidatePath("/");
   revalidatePath("/outbound");
