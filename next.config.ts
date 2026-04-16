@@ -2,10 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   experimental: {
-    allowedDevOrigins: [
-      "192.168.18.10",
-      "imported-moreover-orlando-toner.trycloudflare.com"
-    ],
+    // allowedDevOrigins was removed since it triggers TS type errors in Next 15+ builds on Vercel
   },
   async headers() {
     return [
