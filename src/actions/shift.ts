@@ -20,11 +20,20 @@ export async function openShift() {
 
   // Tentukan nomor shift berdasarkan jam saat ini
   const now = new Date();
-  const hour = now.getHours(); // Waktu server lokal (pastikan timezone server sesuai lokal, Vercel default UTC, jadi kita gunakan offset atau biar browser yang submit waktu jika ini krusial. Namun karena ini Server Action, Vercel jalan di UTC by default. Untuk aman, kita bisa pakai manipulasi timezone, tapi untuk setup ini asumsikan local server)
+  // Format spesifik ke WIB (UTC+7) terlepas dari zona waktu server tempat aplikasi di-deploy.
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Jakarta',
+    hour: 'numeric',
+    hour12: false // Pakai format 24 jam (pukul 1 s/d 24)
+  });
   
-  // Karena Vercel menggunakan UTC, kita adjust ke WIB (UTC+7) secara manual:
-  const offsetWIB = 7;
-  const localHour = (hour + offsetWIB) % 24;
+  const localHourStr = formatter.format(now);
+  let localHour = parseInt(localHourStr, 10);
+  
+  // Karena 'hour12: false' di beberapa environment mengembalikan jam 00 sebagai 24
+  if (localHour === 24) {
+    localHour = 0;
+  }
   
   // Shift 1: 07:00 - 18:59 | Shift 2: 19:00 - 06:59
   const shiftNumber = (localHour >= 7 && localHour < 19) ? 1 : 2;
