@@ -48,6 +48,9 @@ const SCHEMA_STATEMENTS = [
     sapuan_kotor_kg REAL DEFAULT 0,
     admin_name TEXT,
     jumlah_karyawan INTEGER DEFAULT 0,
+    total_produksi_kg REAL DEFAULT 0,
+    total_roll_pcs INTEGER DEFAULT 0,
+    month_year_book TEXT,
     status TEXT DEFAULT 'OPEN'
   )`,
 

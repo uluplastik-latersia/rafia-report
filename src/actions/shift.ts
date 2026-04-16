@@ -62,12 +62,17 @@ export async function closeShift(
     karyawan: number;
   }
 ) {
-  // Hitung total roll diproduksi di shift ini untuk data (Opsional)
+  // Dapatkan bulan aktif
+  const sysStats = await db.execute("SELECT current_month_year FROM system_stats WHERE id = 1");
+  const monthYearBook = (sysStats.rows[0]?.current_month_year as string) || '';
+
+  // Hitung total roll diproduksi di shift ini
   const statsRes = await db.execute({
-    sql: `SELECT SUM(weight_kg) as total_kg FROM rolls WHERE session_id = ?`,
+    sql: `SELECT COUNT(id) as total_pcs, SUM(weight_kg) as total_kg FROM rolls WHERE session_id = ?`,
     args: [sessionId]
   });
   const shiftProductionKg = (statsRes.rows[0]?.total_kg as number) || 0;
+  const shiftProductionPcs = (statsRes.rows[0]?.total_pcs as number) || 0;
 
   // Jalankan kedua update secara serentak dalam satu transaksi BATCH
   await db.batch([
@@ -81,7 +86,10 @@ export async function closeShift(
                 sapuan_kg = ?,
                 sapuan_kotor_kg = ?,
                 admin_name = ?,
-                jumlah_karyawan = ?
+                jumlah_karyawan = ?,
+                total_produksi_kg = ?,
+                total_roll_pcs = ?,
+                month_year_book = ?
             WHERE id = ?`,
       args: [
         data.bahanBaku, 
@@ -91,6 +99,9 @@ export async function closeShift(
         data.sapuanKotor,
         data.adminName, 
         data.karyawan,
+        shiftProductionKg,
+        shiftProductionPcs,
+        monthYearBook,
         sessionId
       ]
     },

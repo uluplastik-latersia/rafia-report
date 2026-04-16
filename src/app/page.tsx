@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { Package, ClipboardList, TimerReset, Settings, Zap, ArrowRight, Grid, PlusCircle, Trash2, Truck } from "lucide-react";
+import { Package, ClipboardList, TimerReset, Settings, Zap, ArrowRight, Grid, PlusCircle, Trash2, Truck, BookOpen } from "lucide-react";
 import Link from "next/link";
 import CloseBookButton from "./CloseBookButton";
 
@@ -135,6 +135,24 @@ export default async function Dashboard() {
               <Truck className="w-8 h-8" />
             </div>
             <span className="font-semibold text-sm text-center">Penjualan<br />(Surat Jalan)</span>
+          </Link>
+        </div>
+
+        <div className="mt-3">
+          <Link
+            href="/laporan-bulanan"
+            className="bg-emerald-50 border-2 border-emerald-500 rounded-2xl p-4 flex items-center justify-between active:scale-95 transition-transform shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-emerald-100 text-emerald-600 p-3 rounded-xl">
+                <BookOpen className="w-6 h-6" />
+              </div>
+              <div className="text-left">
+                 <h3 className="font-bold text-gray-900 text-sm">Buku Laporan Bulanan</h3>
+                 <p className="text-xs text-foreground-muted">Cetak A4 / PDF seluruh hasil produksi bulan ini</p>
+              </div>
+            </div>
+            <ArrowRight className="w-5 h-5 text-emerald-600" />
           </Link>
         </div>
       </section>
