@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
 import { getMonthlyReportData } from "@/actions/report";
 import Link from "next/link";
-import { Printer, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { PrintButton } from "./PrintButton";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +18,8 @@ function getMonthName(str: string) {
   return `${months[monthIndex]} ${year}`;
 }
 
-export default async function MonthlyReportPage({ params }: { params: { month_year: string } }) {
+export default async function MonthlyReportPage(props: { params: Promise<{ month_year: string }> }) {
+  const params = await props.params;
   const monthYear = params.month_year;
   const data = await getMonthlyReportData(monthYear);
 
@@ -29,11 +31,7 @@ export default async function MonthlyReportPage({ params }: { params: { month_ye
         <Link href="/laporan-bulanan" className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 shadow border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors font-semibold text-sm">
           <ArrowLeft className="w-4 h-4" /> Kembali
         </Link>
-        <button 
-          className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white shadow-md rounded-lg hover:bg-emerald-700 transition-colors font-bold text-sm print-control-button"
-        >
-          <Printer className="w-4 h-4" /> Cetak A4 / PDF
-        </button>
+        <PrintButton />
       </div>
 
       {/* KERTAS A4 */}
@@ -130,14 +128,6 @@ export default async function MonthlyReportPage({ params }: { params: { month_ye
 
       </div>
 
-      {/* Script Button Print */}
-      <script dangerouslySetInnerHTML={{
-        __html: `
-          document.querySelector('button.print-control-button').addEventListener('click', function() {
-            window.print();
-          });
-        `
-      }} />
     </div>
   );
 }
