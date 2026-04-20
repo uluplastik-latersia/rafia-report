@@ -19,12 +19,14 @@ export default function SummaryClient({
   shift,
   rolls,
   wastes,
-  operators
+  operators,
+  systemStats
 }: {
   shift: any;
   rolls: any[];
   wastes: any[];
   operators: any[];
+  systemStats?: any;
 }) {
   const router = useRouter();
   const [copyStatus, setCopyStatus] = useState<"idle" | "success" | "error">("idle");
@@ -107,6 +109,10 @@ export default function SummaryClient({
 ${machineDetailsText}
 *5. CATATAN QC*
 • Gagal QC (>75.99kg): ${qcFailedRolls.length} roll
+
+*6. INFORMASI INVENTORY (LIVE)*
+• Stok Gudang: ${systemStats?.current_stock_kg?.toFixed(1) || '0.0'} kg
+• HR Mesin: ${systemStats?.current_hr_kg?.toFixed(1) || '0.0'} kg
 
 _Laporan di-Buat secara otomatis oleh Sistem._`;
 

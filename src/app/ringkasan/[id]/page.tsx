@@ -11,13 +11,19 @@ export default async function SummaryPage(props: { params: Promise<{ id: string 
   const params = await props.params;
   const shiftId = params.id;
   
-  // Ambil data shift berdasarkan ID
-  const result = await db.execute({
-    sql: "SELECT * FROM shift_sessions WHERE id = ?",
-    args: [shiftId]
-  });
-  const row = result.rows[0];
+  // Ambil data shift berdasarkan ID & system_stats
+  const [shiftResult, statsResult] = await db.batch([
+    {
+      sql: "SELECT * FROM shift_sessions WHERE id = ?",
+      args: [shiftId]
+    },
+    "SELECT * FROM system_stats"
+  ]);
+  
+  const row = shiftResult.rows[0];
   const shift = row ? JSON.parse(JSON.stringify(row)) : null;
+  const statsRow = statsResult.rows[0];
+  const systemStats = statsRow ? JSON.parse(JSON.stringify(statsRow)) : null;
 
   if (!shift) {
     return (
@@ -51,6 +57,7 @@ export default async function SummaryPage(props: { params: Promise<{ id: string 
         rolls={rolls as any[]}
         wastes={wastes as any[]}
         operators={operators as any[]}
+        systemStats={systemStats}
       />
     </div>
   );

@@ -35,7 +35,7 @@ export default function ShiftClient({
   const [isClosingModalOpen, setIsClosingModalOpen] = useState(false);
   const [bahanBakuSak, setBahanBakuSak] = useState(0);
   const [sisaSablon, setSisaSablon] = useState(0);
-  const [ppHijauKg, setPpHijauKg] = useState(0);
+  const [ppHijauSak, setPpHijauSak] = useState(0);
   const [sapuanKg, setSapuanKg] = useState(0);
   const [sapuanKotorKg, setSapuanKotorKg] = useState(0);
   const [adminName, setAdminName] = useState("");
@@ -159,7 +159,7 @@ export default function ShiftClient({
         await closeShift(activeShift.id, {
           bahanBaku: bahanBakuSak,
           sisaSablon: sisaSablon,
-          ppHijau: ppHijauKg,
+          ppHijau: ppHijauSak * 25,
           sapuan: sapuanKg,
           sapuanKotor: sapuanKotorKg,
           adminName: adminName || "Admin",
@@ -461,10 +461,10 @@ export default function ShiftClient({
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold">Sisa PP Hijau Muda (kg)</label>
+                <label className="text-xs font-semibold">Sisa PP Hijau Muda (Sak)</label>
                 <input
-                  type="number" min="0" step="0.1" inputMode="decimal" pattern="[0-9]*" required placeholder="Misal: 5.5"
-                  value={ppHijauKg || ""} onChange={e => setPpHijauKg(Number(e.target.value))}
+                  type="number" min="0" step="1" inputMode="numeric" pattern="[0-9]*" required placeholder="Misal: 10"
+                  value={ppHijauSak || ""} onChange={e => setPpHijauSak(Number(e.target.value))}
                   className="w-full p-2 bg-background border border-border rounded-lg font-bold focus:ring-2 focus:ring-danger outline-none"
                 />
               </div>
