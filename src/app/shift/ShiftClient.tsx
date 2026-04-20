@@ -220,8 +220,8 @@ export default function ShiftClient({
             key={m}
             onClick={() => changeTab(m)}
             className={`px-5 py-3 rounded-xl font-bold whitespace-nowrap transition-all flex-shrink-0 ${activeMachine === m
-                ? "bg-primary text-white shadow-md"
-                : "bg-surface text-foreground-muted border border-border"
+              ? "bg-primary text-white shadow-md"
+              : "bg-surface text-foreground-muted border border-border"
               }`}
           >
             Mesin {m}
@@ -443,7 +443,7 @@ export default function ShiftClient({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold">Sapuan Bersih/Global (kg)</label>
+                  <label className="text-xs font-semibold">Sapuan (kg)</label>
                   <input
                     type="number" min="0" step="0.1" inputMode="decimal" pattern="[0-9]*" required placeholder="Misal: 10.2"
                     value={sapuanKg || ""} onChange={e => setSapuanKg(Number(e.target.value))}
@@ -451,7 +451,7 @@ export default function ShiftClient({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-semibold">Sapuan Kotor (kg)</label>
+                  <label className="text-xs font-semibold">Prongkolan Kotor (kg)</label>
                   <input
                     type="number" min="0" step="0.1" inputMode="decimal" pattern="[0-9]*" required placeholder="Misal: 1.5"
                     value={sapuanKotorKg || ""} onChange={e => setSapuanKotorKg(Number(e.target.value))}

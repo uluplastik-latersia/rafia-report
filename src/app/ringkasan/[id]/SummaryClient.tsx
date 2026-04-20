@@ -100,17 +100,17 @@ export default function SummaryClient({
 • Sisa Sablon A: ${sisaSablon} Sak
 • Sisa PP Hijau: ${ppHijauKg.toFixed(1)} kg
 
-*3. WASTE & PENYUSUTAN*
+*3. PENYUSUTAN*
 • Afalan: ${afalanGlobal.toFixed(1)} kg
 • Prongkalan: ${prongkalanGlobal.toFixed(1)} kg
 • Sapuan Global: ${sapuanKg.toFixed(1)} kg
 • Sapuan Kotor: ${sapuanKotorKg.toFixed(1)} kg
 • *Persentase Penyusutan: ${penyusutan} %*
 ${machineDetailsText}
-*5. CATATAN QC*
+*5. CATATAN KUALITAS*
 • Gagal QC (>75.99kg): ${qcFailedRolls.length} roll
 
-*6. INFORMASI INVENTORY (LIVE)*
+*6. INFORMASI STOK*
 • Stok Gudang: ${systemStats?.current_stock_kg?.toFixed(1) || '0.0'} kg
 • HR Mesin: ${systemStats?.current_hr_kg?.toFixed(1) || '0.0'} kg
 
@@ -137,7 +137,7 @@ _Laporan di-Buat secara otomatis oleh Sistem._`;
     textArea.style.left = "-9999px";
     textArea.style.top = "0";
     document.body.appendChild(textArea);
-    
+
     // Khusus iOS: Select dan Set Selection Range
     textArea.focus();
     textArea.setSelectionRange(0, 99999);
@@ -196,17 +196,16 @@ _Laporan di-Buat secara otomatis oleh Sistem._`;
             <button
               type="button"
               onClick={handleCopyWA}
-              className={`py-4 font-bold rounded-xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-all shadow-sm cursor-pointer touch-manipulation ${
-                copyStatus === "success" ? "bg-emerald-500 text-white" :
+              className={`py-4 font-bold rounded-xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-all shadow-sm cursor-pointer touch-manipulation ${copyStatus === "success" ? "bg-emerald-500 text-white" :
                 copyStatus === "error" ? "bg-red-500 text-white" :
-                "bg-emerald-600 text-white"
-              }`}
+                  "bg-emerald-600 text-white"
+                }`}
             >
               {copyStatus === "success" ? <Check className="w-6 h-6 animate-pulse" /> : <Copy className="w-6 h-6" />}
               <span>
                 {copyStatus === "success" ? "Berhasil Disalin!" :
-                 copyStatus === "error" ? "Gagal Menyalin" :
-                 "Copy WA Laporan"}
+                  copyStatus === "error" ? "Gagal Menyalin" :
+                    "Copy WA Laporan"}
               </span>
             </button>
           </div>
