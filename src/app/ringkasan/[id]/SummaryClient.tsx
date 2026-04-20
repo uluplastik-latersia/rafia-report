@@ -104,7 +104,7 @@ export default function SummaryClient({
 • Afalan: ${afalanGlobal.toFixed(1)} kg
 • Prongkalan: ${prongkalanGlobal.toFixed(1)} kg
 • Sapuan Global: ${sapuanKg.toFixed(1)} kg
-• Sapuan Kotor: ${sapuanKotorKg.toFixed(1)} kg
+• Prongkolan Kotor: ${sapuanKotorKg.toFixed(1)} kg
 • *Persentase Penyusutan: ${penyusutan} %*
 ${machineDetailsText}
 *5. CATATAN KUALITAS*
