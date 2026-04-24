@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function SummaryPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const shiftId = params.id;
-  
+
   // Ambil data shift berdasarkan ID & system_stats
   const [shiftResult, statsResult] = await db.batch([
     {
@@ -19,7 +19,7 @@ export default async function SummaryPage(props: { params: Promise<{ id: string 
     },
     "SELECT * FROM system_stats"
   ]);
-  
+
   const row = shiftResult.rows[0];
   const shift = row ? JSON.parse(JSON.stringify(row)) : null;
   const statsRow = statsResult.rows[0];
@@ -45,14 +45,14 @@ export default async function SummaryPage(props: { params: Promise<{ id: string 
     <div className="bg-background min-h-screen print:bg-white print:p-0">
       <div className="p-4 print:hidden flex items-center justify-between border-b border-border bg-surface">
         <div className="flex items-center gap-3">
-            <Link href="/ringkasan" className="p-2 bg-background rounded-full">
+          <Link href="/ringkasan" className="p-2 bg-background rounded-full">
             <ArrowLeft className="w-5 h-5 text-foreground-muted" />
-            </Link>
-            <h1 className="font-bold text-lg">Arsip Laporan Shift {shift.shift_number}</h1>
+          </Link>
+          <h1 className="font-bold text-lg">Arsip Laporan Shift {shift.shift_number}</h1>
         </div>
       </div>
-      
-      <SummaryClient 
+
+      <SummaryClient
         shift={shift}
         rolls={rolls as any[]}
         wastes={wastes as any[]}

@@ -91,7 +91,7 @@ export default function SummaryClient({
 
 *1. HASIL PRODUKSI*
 • Pencatat: ${shift.admin_name && shift.admin_name !== '-' ? shift.admin_name : 'Admin'}
-• Total Roll: ${totalRollsCount} pcs
+• Total Roll: ${totalRollsCount} roll
 • Berat Produksi: ${totalRollsKg.toFixed(1)} kg
 • Jumlah Operator: ${totalOperators} orang
 
@@ -103,7 +103,7 @@ export default function SummaryClient({
 *3. PENYUSUTAN*
 • Afalan: ${afalanGlobal.toFixed(1)} kg
 • Prongkalan: ${prongkalanGlobal.toFixed(1)} kg
-• Sapuan Global: ${sapuanKg.toFixed(1)} kg
+• Sapuan : ${sapuanKg.toFixed(1)} kg
 • Prongkolan Kotor: ${sapuanKotorKg.toFixed(1)} kg
 • *Persentase Penyusutan: ${penyusutan} %*
 ${machineDetailsText}
