@@ -60,7 +60,7 @@ export default function SummaryClient({
 
   let machineDetailsText = "";
   if (activeMachines.length > 0) {
-    machineDetailsText = "\n*4. DETAIL PER MESIN*\n";
+    machineDetailsText = "\n*5. DETAIL PER MESIN*\n";
     activeMachines.forEach(m => {
       const w = wastes.find(ws => ws.machine_number === m) || { afalan_kg: 0, prongkalan_kg: 0 };
       const mRolls = rolls.filter(r => r.machine_number === m);
@@ -89,30 +89,30 @@ export default function SummaryClient({
 ⏰ Jam Timbang: ${wkt.t} WIB
 ⏱️ Shift: ${shift.shift_number}
 
-*1. HASIL PRODUKSI*
+*1. INFORMASI STOK*
+• Stok Gudang: ${systemStats?.current_stock_kg?.toFixed(1) || '0.0'} kg
+• HR Mesin: ${systemStats?.current_hr_kg?.toFixed(1) || '0.0'} kg
+
+*2. HASIL PRODUKSI*
 • Pencatat: ${shift.admin_name && shift.admin_name !== '-' ? shift.admin_name : 'Admin'}
 • Total Roll: ${totalRollsCount} roll
 • Berat Produksi: ${totalRollsKg.toFixed(1)} kg
 • Jumlah Operator: ${totalOperators} orang
 
-*2. PEMAKAIAN BAHAN BAKU*
+*3. PEMAKAIAN BAHAN BAKU*
 • Sablon A Dipakai: ${bahanBakuSak} Sak (${totalSakKg.toFixed(1)} kg)
 • Sisa Sablon A: ${sisaSablon} Sak
 • Sisa PP Hijau: ${ppHijauKg.toFixed(1)} kg
 
-*3. PENYUSUTAN*
+*4. PENYUSUTAN*
 • Afalan: ${afalanGlobal.toFixed(1)} kg
 • Prongkalan: ${prongkalanGlobal.toFixed(1)} kg
 • Sapuan : ${sapuanKg.toFixed(1)} kg
 • Prongkolan Kotor: ${sapuanKotorKg.toFixed(1)} kg
 • *Persentase Penyusutan: ${penyusutan} %*
 ${machineDetailsText}
-*5. CATATAN KUALITAS*
+*6. CATATAN KUALITAS*
 • Gagal QC (>75.99kg): ${qcFailedRolls.length} roll
-
-*6. INFORMASI STOK*
-• Stok Gudang: ${systemStats?.current_stock_kg?.toFixed(1) || '0.0'} kg
-• HR Mesin: ${systemStats?.current_hr_kg?.toFixed(1) || '0.0'} kg
 
 _Laporan di-Buat secara otomatis oleh Sistem._`;
 
