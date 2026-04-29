@@ -15,6 +15,9 @@ import {
   CheckCircle2,
   X,
   Filter,
+  Layers,
+  Plus,
+  Minus,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -24,6 +27,7 @@ type Roll = {
   weight_kg: number;
   machine_number: number;
   operator_code: string;
+  session_id?: string;
 };
 
 type Sale = {
@@ -36,9 +40,19 @@ type Sale = {
   total_rolls: number;
 };
 
+type ShiftWithStock = {
+  id: string;
+  shift_number: number;
+  date_opened: string;
+  admin_name: string;
+  available_rolls: number;
+  available_weight_kg: number;
+};
+
 type Props = {
   inStockRolls: Roll[];
   sales: Sale[];
+  shiftsWithStock: ShiftWithStock[];
 };
 
 function parseWkt(dbStr: string | null) {
@@ -61,7 +75,7 @@ function parseWkt(dbStr: string | null) {
   };
 }
 
-export default function OutboundClient({ inStockRolls, sales }: Props) {
+export default function OutboundClient({ inStockRolls, sales, shiftsWithStock }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -85,6 +99,27 @@ export default function OutboundClient({ inStockRolls, sales }: Props) {
   // --- Computed ---
   const totalWeight = selectedRolls.reduce((a, r) => a + r.weight_kg, 0);
 
+  // Track shift IDs yang sudah dipilih secara penuh
+  const selectedShiftIds = useMemo(() => {
+    const shiftRollCounts: Record<string, number> = {};
+    selectedRolls.forEach(r => {
+      if (r.session_id) {
+        shiftRollCounts[r.session_id] = (shiftRollCounts[r.session_id] || 0) + 1;
+      }
+    });
+    // Shift dianggap "terpilih" jika jumlah roll terpilih >= jumlah available
+    return new Set(
+      shiftsWithStock
+        .filter(s => shiftRollCounts[s.id] && shiftRollCounts[s.id] >= s.available_rolls)
+        .map(s => s.id)
+    );
+  }, [selectedRolls, shiftsWithStock]);
+
+  // Hitung berapa roll dari shift tertentu yang sudah dipilih
+  const getSelectedCountForShift = (shiftId: string) => {
+    return selectedRolls.filter(r => r.session_id === shiftId).length;
+  };
+
   // Filter daftar stok berdasarkan mesin & pencarian
   const filteredStock = useMemo(() => {
     return inStockRolls.filter((r) => {
@@ -102,6 +137,21 @@ export default function OutboundClient({ inStockRolls, sales }: Props) {
     setSearchCode("");
     setSearchResult(null);
     searchRef.current?.focus();
+  };
+
+  // Pilih semua roll dari 1 shift
+  const handleSelectShift = (shiftId: string) => {
+    const shiftRolls = inStockRolls.filter(r => r.session_id === shiftId);
+    setSelectedRolls(prev => {
+      const existingIds = new Set(prev.map(r => r.id));
+      const newRolls = shiftRolls.filter(r => !existingIds.has(r.id));
+      return [...prev, ...newRolls];
+    });
+  };
+
+  // Batalkan semua roll dari 1 shift
+  const handleDeselectShift = (shiftId: string) => {
+    setSelectedRolls(prev => prev.filter(r => r.session_id !== shiftId));
   };
 
   const handleSearchByCode = async () => {
@@ -214,7 +264,78 @@ export default function OutboundClient({ inStockRolls, sales }: Props) {
             </div>
           </div>
 
-          {/* PILIH ROLL */}
+          {/* ======================== */}
+          {/* PILIH CEPAT PER SHIFT */}
+          {/* ======================== */}
+          {shiftsWithStock.length > 0 && (
+            <div className="bg-white border border-indigo-200 rounded-2xl p-4 space-y-3">
+              <h2 className="font-bold text-foreground flex items-center gap-2">
+                <Layers className="w-4 h-4 text-indigo-600" /> Pilih Cepat per Shift
+              </h2>
+              <p className="text-[11px] text-foreground-muted -mt-1">
+                Tekan tombol untuk langsung memasukkan semua roll dari 1 shift.
+              </p>
+
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                {shiftsWithStock.map((shift) => {
+                  const wkt = parseWkt(shift.date_opened);
+                  const isFullySelected = selectedShiftIds.has(shift.id);
+                  const selectedCount = getSelectedCountForShift(shift.id);
+                  const isPartiallySelected = selectedCount > 0 && !isFullySelected;
+
+                  return (
+                    <div
+                      key={shift.id}
+                      className={`rounded-xl border p-3 transition-all ${
+                        isFullySelected
+                          ? "bg-indigo-50 border-indigo-300"
+                          : isPartiallySelected
+                          ? "bg-amber-50 border-amber-200"
+                          : "bg-gray-50 border-gray-200"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-sm text-foreground truncate">
+                            Shift {shift.shift_number} — {wkt.d}
+                          </p>
+                          <p className="text-[11px] text-foreground-muted">
+                            {shift.available_rolls} roll • {Number(shift.available_weight_kg).toFixed(1)} kg
+                            {shift.admin_name && shift.admin_name !== '-' ? ` • ${shift.admin_name}` : ''}
+                            {isPartiallySelected && (
+                              <span className="ml-1 text-amber-600 font-semibold">({selectedCount} dipilih)</span>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex gap-1.5 flex-shrink-0">
+                          {isFullySelected || isPartiallySelected ? (
+                            <button
+                              type="button"
+                              onClick={() => handleDeselectShift(shift.id)}
+                              className="flex items-center gap-1 bg-red-500 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold active:scale-95 transition-transform"
+                            >
+                              <Minus className="w-3 h-3" /> Batalkan
+                            </button>
+                          ) : null}
+                          {!isFullySelected && (
+                            <button
+                              type="button"
+                              onClick={() => handleSelectShift(shift.id)}
+                              className="flex items-center gap-1 bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-[11px] font-bold active:scale-95 transition-transform"
+                            >
+                              <Plus className="w-3 h-3" /> Pilih Semua
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* PILIH ROLL INDIVIDUAL */}
           <div className="bg-white border border-border rounded-2xl p-4 space-y-3">
             <h2 className="font-bold text-foreground flex items-center gap-2">
               <Filter className="w-4 h-4 text-secondary" /> Cari & Pilih Roll

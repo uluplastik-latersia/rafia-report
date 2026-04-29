@@ -1,4 +1,4 @@
-import { getInStockRolls, getSales } from "@/actions/outbound";
+import { getInStockRolls, getSales, getClosedShiftsWithStock } from "@/actions/outbound";
 import OutboundClient from "./OutboundClient";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
@@ -6,9 +6,10 @@ import { ArrowLeft } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function OutboundPage() {
-  const [inStockRolls, sales] = await Promise.all([
+  const [inStockRolls, sales, shiftsWithStock] = await Promise.all([
     getInStockRolls(),
     getSales(),
+    getClosedShiftsWithStock(),
   ]);
 
   return (
@@ -27,7 +28,7 @@ export default async function OutboundPage() {
         </div>
       </div>
 
-      <OutboundClient inStockRolls={inStockRolls} sales={sales} />
+      <OutboundClient inStockRolls={inStockRolls} sales={sales} shiftsWithStock={shiftsWithStock} />
     </div>
   );
 }

@@ -11,10 +11,26 @@ import { revalidatePath } from "next/cache";
 /** Ambil semua roll yang masih tersedia (IN_STOCK) */
 export async function getInStockRolls() {
   const res = await db.execute(
-    `SELECT id, roll_code, weight_kg, machine_number, operator_code, created_at
+    `SELECT id, roll_code, weight_kg, machine_number, operator_code, session_id, created_at
      FROM rolls
      WHERE status = 'IN_STOCK'
      ORDER BY created_at DESC`
+  );
+  return res.rows.map((r) => JSON.parse(JSON.stringify(r)));
+}
+
+/** Ambil daftar shift yang masih punya roll IN_STOCK (untuk fitur pilih cepat per shift) */
+export async function getClosedShiftsWithStock() {
+  const res = await db.execute(
+    `SELECT 
+       s.id, s.shift_number, s.date_opened, s.admin_name,
+       COUNT(r.id) as available_rolls,
+       SUM(r.weight_kg) as available_weight_kg
+     FROM shift_sessions s
+     INNER JOIN rolls r ON r.session_id = s.id AND r.status = 'IN_STOCK'
+     WHERE s.status = 'CLOSED'
+     GROUP BY s.id
+     ORDER BY s.date_opened DESC`
   );
   return res.rows.map((r) => JSON.parse(JSON.stringify(r)));
 }
