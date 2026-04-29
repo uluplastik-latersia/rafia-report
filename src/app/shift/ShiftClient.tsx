@@ -277,7 +277,7 @@ export default function ShiftClient({
                 type="number"
                 min="0" step="0.1" inputMode="decimal" pattern="[0-9]*"
                 placeholder="0.0"
-                value={localWastes[activeMachine]?.afalan || ""}
+                value={localWastes[activeMachine]?.afalan ?? ""}
                 onChange={(e) => handleWasteChange('afalan', e.target.value)}
                 className="w-full p-2 bg-white border border-red-200 text-danger rounded-lg text-sm font-semibold outline-none focus:ring-2 focus:ring-danger"
               />
@@ -291,7 +291,7 @@ export default function ShiftClient({
                 type="number"
                 min="0" step="0.1" inputMode="decimal" pattern="[0-9]*"
                 placeholder="0.0"
-                value={localWastes[activeMachine]?.prongkalan || ""}
+                value={localWastes[activeMachine]?.prongkalan ?? ""}
                 onChange={(e) => handleWasteChange('prongkalan', e.target.value)}
                 className="w-full p-2 bg-white border border-red-200 text-danger rounded-lg text-sm font-semibold outline-none focus:ring-2 focus:ring-danger"
               />
@@ -416,7 +416,7 @@ export default function ShiftClient({
                   <label className="text-xs font-semibold">Jml Karyawan Hadir</label>
                   <input
                     type="number" min="1" step="1" inputMode="numeric" pattern="[0-9]*" required placeholder="Misal: 7"
-                    value={karyawan || ""} onChange={e => setKaryawan(Number(e.target.value))}
+                    value={karyawan ?? ""} onChange={e => setKaryawan(Number(e.target.value))}
                     className="w-full p-2 bg-background border border-border rounded-lg font-bold focus:ring-2 focus:ring-danger outline-none"
                   />
                 </div>
@@ -427,7 +427,7 @@ export default function ShiftClient({
                   <label className="text-xs font-semibold">Pakai Sablon A (Sak)</label>
                   <input
                     type="number" min="0" step="1" inputMode="numeric" pattern="[0-9]*" required placeholder="Misal: 12"
-                    value={bahanBakuSak || ""} onChange={e => setBahanBakuSak(Number(e.target.value))}
+                    value={bahanBakuSak ?? ""} onChange={e => setBahanBakuSak(Number(e.target.value))}
                     className="w-full p-2 bg-background border border-border rounded-lg font-bold focus:ring-2 focus:ring-danger outline-none"
                   />
                 </div>
@@ -435,7 +435,7 @@ export default function ShiftClient({
                   <label className="text-xs font-semibold">Sisa Sablon A (Sak)</label>
                   <input
                     type="number" min="0" step="1" inputMode="numeric" pattern="[0-9]*" required placeholder="Misal: 2"
-                    value={sisaSablon || ""} onChange={e => setSisaSablon(Number(e.target.value))}
+                    value={sisaSablon ?? ""} onChange={e => setSisaSablon(Number(e.target.value))}
                     className="w-full p-2 bg-background border border-border rounded-lg font-bold focus:ring-2 focus:ring-danger outline-none"
                   />
                 </div>
@@ -446,7 +446,7 @@ export default function ShiftClient({
                   <label className="text-xs font-semibold">Sapuan (kg)</label>
                   <input
                     type="number" min="0" step="0.1" inputMode="decimal" pattern="[0-9]*" required placeholder="Misal: 10.2"
-                    value={sapuanKg || ""} onChange={e => setSapuanKg(Number(e.target.value))}
+                    value={sapuanKg ?? ""} onChange={e => setSapuanKg(Number(e.target.value))}
                     className="w-full p-2 bg-background border border-border rounded-lg font-bold focus:ring-2 focus:ring-danger outline-none"
                   />
                 </div>
@@ -454,7 +454,7 @@ export default function ShiftClient({
                   <label className="text-xs font-semibold">Prongkolan Kotor (kg)</label>
                   <input
                     type="number" min="0" step="0.1" inputMode="decimal" pattern="[0-9]*" required placeholder="Misal: 1.5"
-                    value={sapuanKotorKg || ""} onChange={e => setSapuanKotorKg(Number(e.target.value))}
+                    value={sapuanKotorKg ?? ""} onChange={e => setSapuanKotorKg(Number(e.target.value))}
                     className="w-full p-2 bg-background border border-border rounded-lg font-bold focus:ring-2 focus:ring-danger outline-none"
                   />
                 </div>
@@ -464,7 +464,7 @@ export default function ShiftClient({
                 <label className="text-xs font-semibold">Sisa PP Hijau Muda (Sak)</label>
                 <input
                   type="number" min="0" step="1" inputMode="numeric" pattern="[0-9]*" required placeholder="Misal: 10"
-                  value={ppHijauSak || ""} onChange={e => setPpHijauSak(Number(e.target.value))}
+                  value={ppHijauSak ?? ""} onChange={e => setPpHijauSak(Number(e.target.value))}
                   className="w-full p-2 bg-background border border-border rounded-lg font-bold focus:ring-2 focus:ring-danger outline-none"
                 />
               </div>
