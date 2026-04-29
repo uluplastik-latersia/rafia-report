@@ -101,7 +101,7 @@ export default function SummaryClient({
 
 *3. PEMAKAIAN BAHAN BAKU*
 • Sablon A Dipakai: ${bahanBakuSak} Sak (${totalSakKg.toFixed(1)} kg)
-• Sisa Sablon A: ${sisaSablon} Sak
+• Sisa Sablon A: ${sisaSablon} Sak (${(sisaSablon * 25).toFixed(1)} kg)
 • Sisa PP Hijau: ${ppHijauKg.toFixed(1)} kg
 
 *4. PENYUSUTAN*
