@@ -29,9 +29,17 @@ export default async function RingkasanListPage() {
     const dayName = dt.toLocaleString("id-ID", { timeZone: "Asia/Jakarta", weekday: 'long' });
     const dayDate = dt.toLocaleString("id-ID", { timeZone: "Asia/Jakarta", day: 'numeric', month: 'short' });
     
-    // Convert locally exact day number for simple Week tracking
-    const dStr = dt.toLocaleString("en-US", { timeZone: "Asia/Jakarta", day: 'numeric' });
-    const weekNum = Math.ceil(parseInt(dStr, 10) / 7);
+    // Hitung minggu ke-N berdasarkan Senin sebagai awal minggu
+    // Buat tanggal lokal WIB untuk perhitungan yang akurat
+    const localParts = dt.toLocaleString("en-US", { timeZone: "Asia/Jakarta", year: 'numeric', month: 'numeric', day: 'numeric' }).split('/');
+    const localDate = new Date(Number(localParts[2]), Number(localParts[0]) - 1, Number(localParts[1]));
+    const dayOfWeek = localDate.getDay(); // 0=Sun, 1=Mon...
+    // Geser ke Senin dari minggu ini (jika Minggu, mundur 6 hari)
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const mondayOfThisWeek = new Date(localDate);
+    mondayOfThisWeek.setDate(localDate.getDate() + mondayOffset);
+    // Nomor minggu = ceil(tanggal Senin / 7)
+    const weekNum = Math.ceil(mondayOfThisWeek.getDate() / 7);
     
     const yKey = `${year}`;
     const mKey = `${month}`;

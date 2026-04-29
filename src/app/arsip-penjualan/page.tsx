@@ -28,8 +28,14 @@ export default async function ArsipPenjualanListPage() {
     const dayName = dt.toLocaleString("id-ID", { timeZone: "Asia/Jakarta", weekday: 'long' });
     const dayDate = dt.toLocaleString("id-ID", { timeZone: "Asia/Jakarta", day: 'numeric', month: 'short' });
     
-    const dStr = dt.toLocaleString("en-US", { timeZone: "Asia/Jakarta", day: 'numeric' });
-    const weekNum = Math.ceil(parseInt(dStr, 10) / 7);
+    // Hitung minggu ke-N berdasarkan Senin sebagai awal minggu
+    const localParts = dt.toLocaleString("en-US", { timeZone: "Asia/Jakarta", year: 'numeric', month: 'numeric', day: 'numeric' }).split('/');
+    const localDate = new Date(Number(localParts[2]), Number(localParts[0]) - 1, Number(localParts[1]));
+    const dayOfWeek = localDate.getDay();
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const mondayOfThisWeek = new Date(localDate);
+    mondayOfThisWeek.setDate(localDate.getDate() + mondayOffset);
+    const weekNum = Math.ceil(mondayOfThisWeek.getDate() / 7);
     
     const yKey = `${year}`;
     const mKey = `${month}`;
