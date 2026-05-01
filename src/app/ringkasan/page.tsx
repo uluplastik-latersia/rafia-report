@@ -29,17 +29,14 @@ export default async function RingkasanListPage() {
     const dayName = dt.toLocaleString("id-ID", { timeZone: "Asia/Jakarta", weekday: 'long' });
     const dayDate = dt.toLocaleString("id-ID", { timeZone: "Asia/Jakarta", day: 'numeric', month: 'short' });
     
-    // Hitung minggu ke-N berdasarkan Senin sebagai awal minggu
-    // Buat tanggal lokal WIB untuk perhitungan yang akurat
+    // Hitung minggu ke-N dalam bulan ini (Senin sebagai awal minggu)
     const localParts = dt.toLocaleString("en-US", { timeZone: "Asia/Jakarta", year: 'numeric', month: 'numeric', day: 'numeric' }).split('/');
     const localDate = new Date(Number(localParts[2]), Number(localParts[0]) - 1, Number(localParts[1]));
-    const dayOfWeek = localDate.getDay(); // 0=Sun, 1=Mon...
-    // Geser ke Senin dari minggu ini (jika Minggu, mundur 6 hari)
-    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const mondayOfThisWeek = new Date(localDate);
-    mondayOfThisWeek.setDate(localDate.getDate() + mondayOffset);
-    // Nomor minggu = ceil(tanggal Senin / 7)
-    const weekNum = Math.ceil(mondayOfThisWeek.getDate() / 7);
+    const dayOfMonth = localDate.getDate();
+    // Cari hari apa tanggal 1 bulan ini (0=Sun..6=Sat), lalu sesuaikan agar Senin=0
+    const firstOfMonth = new Date(localDate.getFullYear(), localDate.getMonth(), 1);
+    const firstDayAdj = firstOfMonth.getDay() === 0 ? 6 : firstOfMonth.getDay() - 1;
+    const weekNum = Math.ceil((dayOfMonth + firstDayAdj) / 7);
     
     const yKey = `${year}`;
     const mKey = `${month}`;
