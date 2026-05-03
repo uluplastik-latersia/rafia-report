@@ -90,6 +90,14 @@ Dokumen ini dihasilkan oleh Sistem PWA Stok Rafia UPL.`;
     document.body.removeChild(ta);
   }
 
+  // Bagi items ke dalam 4 kolom untuk layout landscape yang efisien
+  const colCount = 4;
+  const rowsPerCol = Math.ceil(items.length / colCount);
+  const columns: SaleItem[][] = [];
+  for (let c = 0; c < colCount; c++) {
+    columns.push(items.slice(c * rowsPerCol, (c + 1) * rowsPerCol));
+  }
+
   return (
     <div className="space-y-4">
       {/* ACTION BUTTONS */}
@@ -111,101 +119,97 @@ Dokumen ini dihasilkan oleh Sistem PWA Stok Rafia UPL.`;
       {/* SURAT JALAN DOCUMENT */}
       <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm print:shadow-none print:border-none print:rounded-none print:p-0">
 
-        {/* PRINT CSS */}
+        {/* PRINT CSS — Landscape A4, margin minimal */}
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
-            @page { size: A4 portrait; margin: 15mm; }
-            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            @page { size: A4 landscape; margin: 5mm 5mm 5mm 5mm; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; }
             .print\\:hidden { display: none !important; }
-            * { font-size: 11pt; }
-            table { width: 100% !important; border-collapse: collapse !important; }
-            th, td { border: 1px solid #000 !important; padding: 4px 6px !important; }
+            .print-doc { padding: 0 !important; }
+            .print-doc * { font-size: 9pt; }
+            .print-doc h1 { font-size: 14pt !important; }
+            .print-doc .sj-number { font-size: 11pt !important; }
+            .print-doc .info-label { font-size: 7pt !important; }
+            .print-doc .info-value { font-size: 9pt !important; }
+            .print-cols-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 6px !important; }
+            .print-cols-grid table { width: 100% !important; border-collapse: collapse !important; }
+            .print-cols-grid th, .print-cols-grid td { border: 1px solid #333 !important; padding: 1px 4px !important; font-size: 8pt !important; }
+            .print-cols-grid th { background: #eee !important; font-size: 7pt !important; }
             thead { display: table-header-group; }
+            .print-footer { font-size: 7pt !important; margin-top: 4px !important; }
           }
         `}} />
 
-        {/* HEADER SURAT JALAN */}
-        <div className="border-b-2 border-black pb-4 mb-4">
-          <div className="flex items-start justify-between">
+        <div className="print-doc">
+          {/* HEADER SURAT JALAN */}
+          <div className="border-b-2 border-black pb-3 mb-3">
+            <div className="flex items-start justify-between">
+              <div>
+                <h1 className="text-xl font-black uppercase tracking-wide">Surat Jalan</h1>
+                <p className="text-sm font-semibold text-gray-500 mt-0.5">PT / CV UPL — Produk Tali Rafia</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-400 uppercase tracking-wider info-label">No. Dokumen</p>
+                <p className="font-bold font-mono text-base sj-number">{sjNumber}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* INFO TABLE */}
+          <div className="grid grid-cols-4 gap-x-4 gap-y-1.5 mb-4 text-sm">
             <div>
-              <h1 className="text-xl font-black uppercase tracking-wide">Surat Jalan</h1>
-              <p className="text-sm font-semibold text-gray-500 mt-0.5">PT / CV UPL — Produk Tali Rafia</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase info-label">Tanggal Keluar</p>
+              <p className="font-semibold info-value" suppressHydrationWarning>{wkt.full}</p>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-400 uppercase tracking-wider">No. Dokumen</p>
-              <p className="font-bold font-mono text-base">{sjNumber}</p>
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase info-label">No. Polisi</p>
+              <p className="font-semibold info-value">{sale.nopol || "—"}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase info-label">PIC / Admin</p>
+              <p className="font-semibold info-value">{sale.pic_name}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase info-label">Tujuan / Pembeli</p>
+              <p className="font-semibold info-value">{sale.buyer_name}</p>
             </div>
           </div>
-        </div>
 
-        {/* INFO TABLE */}
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2 mb-6 text-sm">
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase">Tanggal Keluar</p>
-            <p className="font-semibold" suppressHydrationWarning>{wkt.full}</p>
+          {/* SUMMARY BAR */}
+          <div className="flex items-center justify-between bg-gray-100 print:bg-gray-100 rounded-lg px-4 py-2 mb-3 text-sm font-bold border border-gray-300">
+            <span>Total: {sale.total_rolls} Roll</span>
+            <span>Berat: {sale.total_weight_kg.toFixed(1)} kg</span>
           </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase">No. Polisi</p>
-            <p className="font-semibold">{sale.nopol || "—"}</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase">PIC / Admin</p>
-            <p className="font-semibold">{sale.pic_name}</p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase">Tujuan / Pembeli</p>
-            <p className="font-semibold">{sale.buyer_name}</p>
-          </div>
-        </div>
 
-        {/* ROLL TABLE */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse border border-gray-300 mb-6">
-            <thead className="bg-gray-50 print:bg-transparent">
-              <tr className="border-b-2 border-gray-300">
-                <th className="border border-gray-300 p-2 text-center font-bold w-10">No</th>
-                <th className="border border-gray-300 p-2 text-left font-bold">Kode Roll</th>
-                <th className="border border-gray-300 p-2 text-center font-bold">Mesin</th>
-                <th className="border border-gray-300 p-2 text-center font-bold">Operator</th>
-                <th className="border border-gray-300 p-2 text-right font-bold">Berat (kg)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, i) => (
-                <tr key={item.id} className={`border-b border-gray-200 ${i % 2 === 0 ? "" : "bg-gray-50/50"}`}>
-                  <td className="border border-gray-200 p-2 text-center text-gray-500">{i + 1}</td>
-                  <td className="border border-gray-200 p-2 font-mono font-semibold text-xs">{item.roll_code}</td>
-                  <td className="border border-gray-200 p-2 text-center">{item.machine_number}</td>
-                  <td className="border border-gray-200 p-2 text-center capitalize text-xs">{item.operator_code}</td>
-                  <td className="border border-gray-200 p-2 text-right font-semibold">{item.weight_kg.toFixed(1)}</td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-gray-800 bg-gray-100 print:bg-transparent font-bold">
-                <td className="border border-gray-300 p-2 text-center" colSpan={4}>
-                  TOTAL ({sale.total_rolls} Roll)
-                </td>
-                <td className="border border-gray-300 p-2 text-right">{sale.total_weight_kg.toFixed(1)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+          {/* ROLL TABLE — 4 kolom berdampingan: [No | Kode Roll] x 4 */}
+          <div className="print-cols-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            {columns.map((colItems, colIdx) => (
+              <table key={colIdx} className="w-full text-sm border-collapse border border-gray-300">
+                <thead className="bg-gray-50 print:bg-transparent">
+                  <tr className="border-b border-gray-300">
+                    <th className="border border-gray-300 p-1.5 text-center font-bold w-8 text-xs">No</th>
+                    <th className="border border-gray-300 p-1.5 text-left font-bold text-xs">Kode Roll</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {colItems.map((item, i) => {
+                    const globalIndex = colIdx * rowsPerCol + i + 1;
+                    return (
+                      <tr key={item.id} className={`border-b border-gray-200 ${i % 2 === 0 ? "" : "bg-gray-50/50"}`}>
+                        <td className="border border-gray-200 p-1 text-center text-gray-500 text-xs">{globalIndex}</td>
+                        <td className="border border-gray-200 p-1 font-mono font-semibold text-xs">{item.roll_code}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ))}
+          </div>
 
-        {/* TANDA TANGAN */}
-        <div className="grid grid-cols-3 gap-4 mt-8 text-sm">
-          {["Pengirim", "Penerima", "Supir / Kendaraan"].map((label) => (
-            <div key={label} className="text-center">
-              <p className="text-xs text-gray-500 mb-12 font-semibold uppercase">{label}</p>
-              <div className="border-b border-gray-400 mb-1"></div>
-              <p className="text-xs text-gray-400">(________________)</p>
-            </div>
-          ))}
+          <p className="text-center text-xs text-gray-400 mt-4 border-t border-gray-200 pt-2 print-footer">
+            Dokumen ini dibuat oleh Sistem PWA Stok Rafia UPL.
+          </p>
         </div>
-
-        <p className="text-center text-xs text-gray-400 mt-6 border-t border-gray-200 pt-3">
-          Dokumen ini sah tanpa tanda tangan basah selama ada stempel perusahaan. Dibuat oleh Sistem PWA Stok Rafia UPL.
-        </p>
       </div>
     </div>
   );
