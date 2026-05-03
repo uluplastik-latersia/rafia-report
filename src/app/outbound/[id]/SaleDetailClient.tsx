@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Printer, Share2 } from "lucide-react";
 
 type SaleItem = {
@@ -90,12 +91,15 @@ Dokumen ini dihasilkan oleh Sistem PWA Stok Rafia UPL.`;
     document.body.removeChild(ta);
   }
 
-  // Bagi items ke dalam 4 kolom untuk layout landscape yang efisien
-  const colCount = 4;
-  const rowsPerCol = Math.ceil(items.length / colCount);
-  const columns: SaleItem[][] = [];
-  for (let c = 0; c < colCount; c++) {
-    columns.push(items.slice(c * rowsPerCol, (c + 1) * rowsPerCol));
+  // Buat baris tabel — 8 pasang [No, Kode] per baris, urutan kiri ke kanan
+  const colPairs = 8;
+  const tableRows: (SaleItem | null)[][] = [];
+  for (let i = 0; i < items.length; i += colPairs) {
+    const row: (SaleItem | null)[] = [];
+    for (let c = 0; c < colPairs; c++) {
+      row.push(i + c < items.length ? items[i + c] : null);
+    }
+    tableRows.push(row);
   }
 
   return (
@@ -119,7 +123,7 @@ Dokumen ini dihasilkan oleh Sistem PWA Stok Rafia UPL.`;
       {/* SURAT JALAN DOCUMENT */}
       <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm print:shadow-none print:border-none print:rounded-none print:p-0">
 
-        {/* PRINT CSS — Landscape A4, margin minimal */}
+        {/* PRINT CSS — Landscape A4, margin minimal, sel super rapat */}
         <style dangerouslySetInnerHTML={{ __html: `
           @media print {
             @page { size: A4 landscape; margin: 5mm 5mm 5mm 5mm; }
@@ -131,10 +135,11 @@ Dokumen ini dihasilkan oleh Sistem PWA Stok Rafia UPL.`;
             .print-doc .sj-number { font-size: 11pt !important; }
             .print-doc .info-label { font-size: 7pt !important; }
             .print-doc .info-value { font-size: 9pt !important; }
-            .print-cols-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 6px !important; }
-            .print-cols-grid table { width: 100% !important; border-collapse: collapse !important; }
-            .print-cols-grid th, .print-cols-grid td { border: 1px solid #333 !important; padding: 1px 4px !important; font-size: 8pt !important; }
-            .print-cols-grid th { background: #eee !important; font-size: 7pt !important; }
+            .sj-roll-table { width: 100% !important; border-collapse: collapse !important; }
+            .sj-roll-table th { border: 1px solid #333 !important; padding: 1px 2px !important; font-size: 7pt !important; background: #eee !important; text-align: center; white-space: nowrap; }
+            .sj-roll-table td { border: 1px solid #333 !important; padding: 0px 2px !important; font-size: 7.5pt !important; line-height: 1.3; white-space: nowrap; }
+            .sj-roll-table .col-no { width: 18px !important; text-align: center; }
+            .sj-roll-table .col-code { text-align: left; }
             thead { display: table-header-group; }
             .print-footer { font-size: 7pt !important; margin-top: 4px !important; }
           }
@@ -181,29 +186,39 @@ Dokumen ini dihasilkan oleh Sistem PWA Stok Rafia UPL.`;
             <span>Berat: {sale.total_weight_kg.toFixed(1)} kg</span>
           </div>
 
-          {/* ROLL TABLE — 4 kolom berdampingan: [No | Kode Roll] x 4 */}
-          <div className="print-cols-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-            {columns.map((colItems, colIdx) => (
-              <table key={colIdx} className="w-full text-sm border-collapse border border-gray-300">
-                <thead className="bg-gray-50 print:bg-transparent">
-                  <tr className="border-b border-gray-300">
-                    <th className="border border-gray-300 p-1.5 text-center font-bold w-8 text-xs">No</th>
-                    <th className="border border-gray-300 p-1.5 text-left font-bold text-xs">Kode Roll</th>
+          {/* ROLL TABLE — 8 pasang [NO | KODE] per baris, urutan kiri ke kanan */}
+          <div className="overflow-x-auto">
+            <table className="sj-roll-table w-full text-xs border-collapse border border-gray-300">
+              <thead className="bg-gray-50">
+                <tr>
+                  {Array.from({ length: colPairs }).map((_, i) => (
+                    <React.Fragment key={i}>
+                      <th className="col-no border border-gray-300 px-1 py-0.5 text-center font-bold text-[10px]">NO</th>
+                      <th className="col-code border border-gray-300 px-1 py-0.5 text-left font-bold text-[10px]">KODE</th>
+                    </React.Fragment>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {tableRows.map((row, rowIdx) => (
+                  <tr key={rowIdx}>
+                    {row.map((item, colIdx) => {
+                      const globalIdx = rowIdx * colPairs + colIdx + 1;
+                      return (
+                        <React.Fragment key={colIdx}>
+                          <td className="col-no border border-gray-200 px-0.5 py-0 text-center text-gray-500 text-[10px]">
+                            {item ? globalIdx : ""}
+                          </td>
+                          <td className="col-code border border-gray-200 px-1 py-0 font-mono font-semibold text-[10px]">
+                            {item ? item.roll_code : ""}
+                          </td>
+                        </React.Fragment>
+                      );
+                    })}
                   </tr>
-                </thead>
-                <tbody>
-                  {colItems.map((item, i) => {
-                    const globalIndex = colIdx * rowsPerCol + i + 1;
-                    return (
-                      <tr key={item.id} className={`border-b border-gray-200 ${i % 2 === 0 ? "" : "bg-gray-50/50"}`}>
-                        <td className="border border-gray-200 p-1 text-center text-gray-500 text-xs">{globalIndex}</td>
-                        <td className="border border-gray-200 p-1 font-mono font-semibold text-xs">{item.roll_code}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            ))}
+                ))}
+              </tbody>
+            </table>
           </div>
 
           <p className="text-center text-xs text-gray-400 mt-4 border-t border-gray-200 pt-2 print-footer">
