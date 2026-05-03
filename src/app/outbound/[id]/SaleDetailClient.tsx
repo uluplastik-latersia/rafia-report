@@ -91,8 +91,8 @@ Dokumen ini dihasilkan oleh Sistem PWA Stok Rafia UPL.`;
     document.body.removeChild(ta);
   }
 
-  // Buat baris tabel — 8 pasang [No, Kode] per baris, urutan kiri ke kanan
-  const colPairs = 8;
+  // Buat baris tabel — 6 pasang [No, Kode] per baris, urutan kiri ke kanan
+  const colPairs = 6;
   const tableRows: (SaleItem | null)[][] = [];
   for (let i = 0; i < items.length; i += colPairs) {
     const row: (SaleItem | null)[] = [];
@@ -136,9 +136,9 @@ Dokumen ini dihasilkan oleh Sistem PWA Stok Rafia UPL.`;
             .print-doc .info-label { font-size: 7pt !important; }
             .print-doc .info-value { font-size: 9pt !important; }
             .sj-roll-table { width: 100% !important; border-collapse: collapse !important; }
-            .sj-roll-table th { border: 1px solid #333 !important; padding: 1px 2px !important; font-size: 7pt !important; background: #eee !important; text-align: center; white-space: nowrap; }
-            .sj-roll-table td { border: 1px solid #333 !important; padding: 0px 2px !important; font-size: 7.5pt !important; line-height: 1.3; white-space: nowrap; }
-            .sj-roll-table .col-no { width: 18px !important; text-align: center; }
+            .sj-roll-table th { border: 1px solid #333 !important; padding: 1px 3px !important; font-size: 11pt !important; background: #eee !important; text-align: center; white-space: nowrap; }
+            .sj-roll-table td { border: 1px solid #333 !important; padding: 0px 3px !important; font-size: 11pt !important; line-height: 1.4; white-space: nowrap; }
+            .sj-roll-table .col-no { width: 22px !important; text-align: center; }
             .sj-roll-table .col-code { text-align: left; }
             thead { display: table-header-group; }
             .print-footer { font-size: 7pt !important; margin-top: 4px !important; }
