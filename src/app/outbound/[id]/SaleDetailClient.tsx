@@ -58,7 +58,7 @@ export default function SaleDetailClient({ sale, items }: { sale: Sale; items: S
 
   const handleShareWA = () => {
     const text =
-`*SURAT JALAN - ${sjNumber}*
+      `*SURAT JALAN - ${sjNumber}*
 📅 Tanggal: ${wkt.full}
 👤 PIC: ${sale.pic_name}
 🏪 Pembeli: ${sale.buyer_name}
@@ -124,7 +124,8 @@ Dokumen ini dihasilkan oleh Sistem PWA Stok Rafia UPL.`;
       <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm print:shadow-none print:border-none print:rounded-none print:p-0">
 
         {/* PRINT CSS — Landscape A4, margin minimal, sel super rapat */}
-        <style dangerouslySetInnerHTML={{ __html: `
+        <style dangerouslySetInnerHTML={{
+          __html: `
           @media print {
             @page { size: A4 landscape; margin: 5mm 5mm 5mm 5mm; }
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; }
@@ -151,7 +152,7 @@ Dokumen ini dihasilkan oleh Sistem PWA Stok Rafia UPL.`;
             <div className="flex items-start justify-between">
               <div>
                 <h1 className="text-xl font-black uppercase tracking-wide">Surat Jalan</h1>
-                <p className="text-sm font-semibold text-gray-500 mt-0.5">PT / CV UPL — Produk Tali Rafia</p>
+                <p className="text-sm font-semibold text-gray-500 mt-0.5">PT UPL — Produk Tali Rafia</p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-gray-400 uppercase tracking-wider info-label">No. Dokumen</p>
@@ -163,7 +164,7 @@ Dokumen ini dihasilkan oleh Sistem PWA Stok Rafia UPL.`;
           {/* INFO TABLE */}
           <div className="grid grid-cols-4 gap-x-4 gap-y-1.5 mb-4 text-sm">
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase info-label">Tanggal Keluar</p>
+              <p className="text-xs font-semibold text-gray-400 uppercase info-label">Tanggal Dibuat</p>
               <p className="font-semibold info-value" suppressHydrationWarning>{wkt.full}</p>
             </div>
             <div>
