@@ -27,6 +27,7 @@ export type MonthlyReportData = {
   total_pp_hijau: number;
   total_sisa_sablon: number;
   total_sapuan_kotor: number;
+  total_afalan_pelet_sak: number;
 };
 
 /**
@@ -49,6 +50,7 @@ export async function getMonthlyReportData(monthYear: string): Promise<MonthlyRe
   let total_pp_hijau = 0;
   let total_sisa_sablon = 0;
   let total_sapuan_kotor = 0;
+  let total_afalan_pelet_sak = 0;
 
   for (const shift of shifts) {
     total_produksi_kg += Number(shift.total_produksi_kg) || 0;
@@ -58,6 +60,7 @@ export async function getMonthlyReportData(monthYear: string): Promise<MonthlyRe
     total_pp_hijau += Number(shift.pp_hijau_muda_kg) || 0;
     total_sisa_sablon += Number(shift.sisa_sablon_a_karung) || 0;
     total_sapuan_kotor += Number(shift.sapuan_kotor_kg) || 0;
+    total_afalan_pelet_sak += Number(shift.afalan_pelet_sak) || 0;
   }
 
   return {
@@ -68,6 +71,7 @@ export async function getMonthlyReportData(monthYear: string): Promise<MonthlyRe
     total_sapuan,
     total_pp_hijau,
     total_sisa_sablon,
-    total_sapuan_kotor
+    total_sapuan_kotor,
+    total_afalan_pelet_sak
   };
 }

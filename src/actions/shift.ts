@@ -60,6 +60,7 @@ export async function closeShift(
     sapuanKotor: number;
     adminName: string;
     karyawan: number;
+    afalanPeletSak: number;
   }
 ) {
   // Dapatkan bulan aktif
@@ -89,7 +90,8 @@ export async function closeShift(
                 jumlah_karyawan = ?,
                 total_produksi_kg = ?,
                 total_roll_pcs = ?,
-                month_year_book = ?
+                month_year_book = ?,
+                afalan_pelet_sak = ?
             WHERE id = ?`,
       args: [
         data.bahanBaku, 
@@ -102,6 +104,7 @@ export async function closeShift(
         shiftProductionKg,
         shiftProductionPcs,
         monthYearBook,
+        data.afalanPeletSak,
         sessionId
       ]
     },

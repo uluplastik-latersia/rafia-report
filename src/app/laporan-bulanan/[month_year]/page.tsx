@@ -59,13 +59,14 @@ export default async function MonthlyReportPage(props: { params: Promise<{ month
                 <th className="py-3 px-2 border-r border-gray-400 text-right">Hijau(Kg)</th>
                 <th className="py-3 px-2 border-r border-gray-400 text-right">Sp.Bersih</th>
                 <th className="py-3 px-2 border-r border-gray-400 text-right">Sp.Kotor</th>
+                <th className="py-3 px-2 border-r border-gray-400 text-right">Af.Pelet</th>
                 <th className="py-3 px-2 text-center w-[40px]">Kar</th>
               </tr>
             </thead>
             <tbody>
               {data.shifts.length === 0 ? (
                 <tr>
-                   <td colSpan={11} className="py-8 text-center text-gray-400 italic">Belum ada riwayat produksi di buku ini.</td>
+                 <td colSpan={12} className="py-8 text-center text-gray-400 italic">Belum ada riwayat produksi di buku ini.</td>
                 </tr>
               ) : (
                 data.shifts.map((shift, idx) => {
@@ -90,6 +91,7 @@ export default async function MonthlyReportPage(props: { params: Promise<{ month
                       <td className="py-2.5 px-2 border-r border-gray-300 text-right">{shift.pp_hijau_muda_kg || 0}</td>
                       <td className="py-2.5 px-2 border-r border-gray-300 text-right">{shift.sapuan_kg || 0}</td>
                       <td className="py-2.5 px-2 border-r border-gray-300 text-right">{shift.sapuan_kotor_kg || 0}</td>
+                      <td className="py-2.5 px-2 border-r border-gray-300 text-right">{shift.afalan_pelet_sak || 0}</td>
                       <td className="py-2.5 px-2 text-center text-gray-500">{shift.jumlah_karyawan || 0}</td>
                     </tr>
                   );
@@ -108,6 +110,7 @@ export default async function MonthlyReportPage(props: { params: Promise<{ month
                 <td className="py-3 px-2 border-r border-gray-600 text-right">{data.total_pp_hijau.toFixed(1)}</td>
                 <td className="py-3 px-2 border-r border-gray-600 text-right">{data.total_sapuan.toFixed(1)}</td>
                 <td className="py-3 px-2 border-r border-gray-600 text-right">{data.total_sapuan_kotor.toFixed(1)}</td>
+                <td className="py-3 px-2 border-r border-gray-600 text-right">{data.total_afalan_pelet_sak}</td>
                 <td className="py-3 px-2 text-center">-</td>
               </tr>
             </tfoot>

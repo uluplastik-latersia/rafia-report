@@ -40,6 +40,7 @@ export default function ShiftClient({
   const [sapuanKotorKg, setSapuanKotorKg] = useState(0);
   const [adminName, setAdminName] = useState("");
   const [karyawan, setKaryawan] = useState(0);
+  const [afalanPeletSak, setAfalanPeletSak] = useState(0);
 
   // Inisialisasi Waste State dari Server Data
   useEffect(() => {
@@ -163,7 +164,8 @@ export default function ShiftClient({
           sapuan: sapuanKg,
           sapuanKotor: sapuanKotorKg,
           adminName: adminName || "Admin",
-          karyawan: karyawan
+          karyawan: karyawan,
+          afalanPeletSak: afalanPeletSak
         });
         setIsClosingModalOpen(false);
         startTransition(() => {
@@ -465,6 +467,15 @@ export default function ShiftClient({
                 <input
                   type="number" min="0" step="1" inputMode="numeric" pattern="[0-9]*" required placeholder="Misal: 10"
                   value={ppHijauSak ?? ""} onChange={e => setPpHijauSak(Number(e.target.value))}
+                  className="w-full p-2 bg-background border border-border rounded-lg font-bold focus:ring-2 focus:ring-danger outline-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold">Sisa Afalan Pelet (Sak)</label>
+                <input
+                  type="number" min="0" step="1" inputMode="numeric" pattern="[0-9]*" required placeholder="0"
+                  value={afalanPeletSak ?? ""} onChange={e => setAfalanPeletSak(Number(e.target.value))}
                   className="w-full p-2 bg-background border border-border rounded-lg font-bold focus:ring-2 focus:ring-danger outline-none"
                 />
               </div>
