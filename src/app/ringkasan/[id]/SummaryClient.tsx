@@ -108,9 +108,8 @@ export default function SummaryClient({
 • Sisa PP Hijau: ${ppHijauKg.toFixed(1)} kg
 
 *4. PENYUSUTAN*
-• Afalan (7 Mesin): ${afalanGlobal.toFixed(1)} kg
-• Prongkolan (7 Mesin): ${prongkalanGlobal.toFixed(1)} kg
-• Afalan Peletan: ${afalanPeletSak} Sak (${afalanPeletKg.toFixed(1)} kg)
+• Afalan: ${afalanGlobal.toFixed(1)} kg
+• Prongkolan: ${prongkalanGlobal.toFixed(1)} kg
 • Sapuan : ${sapuanKg.toFixed(1)} kg
 • Prongkolan Kotor: ${sapuanKotorKg.toFixed(1)} kg
 • *Persentase Penyusutan: ${penyusutan} %*
@@ -306,11 +305,11 @@ _Laporan di-Buat secara otomatis oleh Sistem._`;
                     <td className="py-1 print:py-0.5 print:border-none text-right font-bold">{afalanPeletSak} Sak ({afalanPeletKg} kg)</td>
                   </tr>
                   <tr className="border-t border-gray-400">
-                    <td className="py-1 print:py-0.5 print:border-none font-bold text-red-700 print:text-black">Total Afalan (7 Mesin):</td>
+                    <td className="py-1 print:py-0.5 print:border-none font-bold text-red-700 print:text-black">Total Afalan:</td>
                     <td className="py-1 print:py-0.5 print:border-none text-right font-bold text-red-700 print:text-black">{afalanGlobal.toFixed(1)} kg</td>
                   </tr>
                   <tr>
-                    <td className="py-1 print:py-0.5 print:border-none font-bold text-red-700 print:text-black">Total Prongkolan (7 Mesin):</td>
+                    <td className="py-1 print:py-0.5 print:border-none font-bold text-red-700 print:text-black">Total Prongkolan:</td>
                     <td className="py-1 print:py-0.5 print:border-none text-right font-bold text-red-700 print:text-black">{prongkalanGlobal.toFixed(1)} kg</td>
                   </tr>
                 </tbody>
