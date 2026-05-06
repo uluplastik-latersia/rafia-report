@@ -286,7 +286,7 @@ _Laporan di-Buat secara otomatis oleh Sistem._`;
                   </tr>
                   <tr>
                     <td className="py-1 print:py-0.5 print:border-none">Sisa Sablon A:</td>
-                    <td className="py-1 print:py-0.5 print:border-none text-right font-bold">{sisaSablon} Sak</td>
+                    <td className="py-1 print:py-0.5 print:border-none text-right font-bold">{sisaSablon} Sak ({sisaSablon * 25} kg)</td>
                   </tr>
                   <tr>
                     <td className="py-1 print:py-0.5 print:border-none">Sisa PP Hijau:</td>
