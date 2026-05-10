@@ -3,6 +3,7 @@ import { getMonthlyReportData } from "@/actions/report";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { PrintButton } from "./PrintButton";
+import InsightMesinBulanan from "./InsightMesinBulanan";
 
 export const dynamic = "force-dynamic";
 
@@ -116,6 +117,9 @@ export default async function MonthlyReportPage(props: { params: Promise<{ month
             </tfoot>
           </table>
         </div>
+
+        {/* INSIGHT MESIN MINGGUAN / BULANAN */}
+        <InsightMesinBulanan monthYear={monthYear} />
 
       </div>
 

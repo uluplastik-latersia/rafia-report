@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { Package, ClipboardList, TimerReset, Settings, Zap, ArrowRight, Grid, PlusCircle, Trash2, Truck, BookOpen } from "lucide-react";
 import Link from "next/link";
 import CloseBookButton from "./CloseBookButton";
+import InsightMesin from "./InsightMesin";
 
 // Force dynamic since dashboard data updates frequently
 export const dynamic = "force-dynamic";
@@ -156,6 +157,9 @@ export default async function Dashboard() {
           </Link>
         </div>
       </section>
+
+      {/* INSIGHT MESIN */}
+      <InsightMesin />
 
     </div>
   );
