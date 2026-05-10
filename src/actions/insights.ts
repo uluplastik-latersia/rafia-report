@@ -3,22 +3,34 @@
 import { db } from "@/lib/db";
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format } from "date-fns";
 
-export type DailyInsight = {
+export type MachineData = {
+  machineNumber: number;
+  productionKg: number;
+  afalanKg: number;
+};
+
+export type DailyInsightDetail = {
   date: string;
-  topProductionMachine: number | null;
-  topProductionKg: number;
-  topAfalanMachine: number | null;
-  topAfalanKg: number;
+  machines: MachineData[];
+};
+
+export type WeeklyAverage = {
+  machineNumber: number;
+  avgProductionKg: number;
+  avgAfalanKg: number;
+};
+
+export type InsightDashboardData = {
+  dailyDetails: DailyInsightDetail[];
+  averages: WeeklyAverage[];
+  daysCount: number;
 };
 
 /**
- * Mendapatkan insight mesin harian dalam satu rentang tanggal tertentu
+ * Mendapatkan insight mesin secara detail (semua 7 mesin) dalam rentang waktu
  */
-export async function getMachineInsights(startDateStr: string, endDateStr: string): Promise<DailyInsight[]> {
+export async function getDetailedMachineInsights(startDateStr: string, endDateStr: string): Promise<InsightDashboardData> {
   try {
-    // Pastikan kita mengambil data bedasarkan rentang waktu
-    // startDate dan endDate dalam format YYYY-MM-DD
-    
     // 1. Ambil data produksi per mesin per hari
     const prodQuery = `
       SELECT 
@@ -49,114 +61,104 @@ export async function getMachineInsights(startDateStr: string, endDateStr: strin
     ]);
 
     // Mengelompokkan berdasarkan tanggal
-    const dataByDate: Record<string, {
-      production: Record<number, number>,
-      waste: Record<number, number>
-    }> = {};
+    const dataByDate: Record<string, Record<number, { prod: number, waste: number }>> = {};
 
-    // Inisialisasi data map untuk setiap baris produksi
+    // Helper untuk inisialisasi date
+    const initDate = (date: string) => {
+      if (!dataByDate[date]) {
+        dataByDate[date] = {};
+        for (let i = 1; i <= 7; i++) {
+          dataByDate[date][i] = { prod: 0, waste: 0 };
+        }
+      }
+    };
+
+    // Populasi data produksi
     for (const row of prodRes.rows) {
       const date = String(row.prod_date);
       const machine = Number(row.machine_number);
       const weight = Number(row.total_produksi);
-      
-      if (!dataByDate[date]) {
-        dataByDate[date] = { production: {}, waste: {} };
+      initDate(date);
+      if (machine >= 1 && machine <= 7) {
+        dataByDate[date][machine].prod = weight;
       }
-      dataByDate[date].production[machine] = weight;
     }
 
-    // Inisialisasi data map untuk setiap baris waste
+    // Populasi data waste
     for (const row of wasteRes.rows) {
       const date = String(row.prod_date);
       const machine = Number(row.machine_number);
       const waste = Number(row.total_afalan);
-      
-      if (!dataByDate[date]) {
-        dataByDate[date] = { production: {}, waste: {} };
+      initDate(date);
+      if (machine >= 1 && machine <= 7) {
+        dataByDate[date][machine].waste = waste;
       }
-      dataByDate[date].waste[machine] = waste;
     }
 
-    // Mencari pemenang (Insight) per hari
-    const insights: DailyInsight[] = [];
-    
-    // Urutkan tanggal dari yang terlama ke terbaru
+    // Membentuk struktur DailyInsightDetail
+    const dailyDetails: DailyInsightDetail[] = [];
     const sortedDates = Object.keys(dataByDate).sort();
+
+    // Kalkulasi total untuk rata-rata
+    const totalProdPerMachine: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
+    const totalWastePerMachine: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
+    const daysCount = sortedDates.length;
 
     for (const date of sortedDates) {
       const dayData = dataByDate[date];
+      const machines: MachineData[] = [];
       
-      let topProdMachine = null;
-      let topProdKg = 0;
-      
-      let topAfalanMachine = null;
-      let topAfalanKg = 0;
-      
-      // Cari mesin dengan produksi tertinggi hari itu
-      for (const [machineStr, kg] of Object.entries(dayData.production)) {
-        if (kg > topProdKg) {
-          topProdKg = kg;
-          topProdMachine = Number(machineStr);
-        }
+      for (let i = 1; i <= 7; i++) {
+        const prod = dayData[i].prod;
+        const waste = dayData[i].waste;
+        
+        machines.push({
+          machineNumber: i,
+          productionKg: prod,
+          afalanKg: waste
+        });
+        
+        totalProdPerMachine[i] += prod;
+        totalWastePerMachine[i] += waste;
       }
       
-      // Cari mesin dengan afalan tertinggi hari itu
-      for (const [machineStr, kg] of Object.entries(dayData.waste)) {
-        if (kg > topAfalanKg) {
-          topAfalanKg = kg;
-          topAfalanMachine = Number(machineStr);
-        }
-      }
-      
-      insights.push({
-        date,
-        topProductionMachine: topProdMachine,
-        topProductionKg: topProdKg,
-        topAfalanMachine: topAfalanMachine,
-        topAfalanKg: topAfalanKg
+      dailyDetails.push({ date, machines });
+    }
+
+    // Kalkulasi rata-rata (hanya jika ada hari berjalan)
+    const averages: WeeklyAverage[] = [];
+    for (let i = 1; i <= 7; i++) {
+      averages.push({
+        machineNumber: i,
+        avgProductionKg: daysCount > 0 ? totalProdPerMachine[i] / daysCount : 0,
+        avgAfalanKg: daysCount > 0 ? totalWastePerMachine[i] / daysCount : 0,
       });
     }
 
-    // Urutkan kembali descending (terbaru di atas)
-    return insights.reverse();
+    // Urutkan kembali descending (terbaru di atas) untuk tampilan list harian
+    return {
+      dailyDetails: dailyDetails.reverse(),
+      averages,
+      daysCount
+    };
   } catch (error) {
     console.error("Gagal mendapatkan machine insights:", error);
-    return [];
+    return { dailyDetails: [], averages: [], daysCount: 0 };
   }
 }
 
 /**
- * Mendapatkan insight untuk minggu ini (Minggu - Sabtu)
+ * Mendapatkan insight untuk minggu ini (Senin - Minggu)
  */
 export async function getCurrentWeekInsights() {
   const now = new Date();
-  const start = startOfWeek(now, { weekStartsOn: 0 }); // 0 = Sunday
-  const end = endOfWeek(now, { weekStartsOn: 0 });
+  // Menggunakan weekStartsOn: 1 agar minggu dimulai dari Senin dan berakhir di Minggu,
+  // atau weekStartsOn: 0 untuk Minggu - Sabtu. Di Indonesia standar kerja biasanya Senin-Sabtu/Minggu.
+  const start = startOfWeek(now, { weekStartsOn: 1 }); 
+  const end = endOfWeek(now, { weekStartsOn: 1 });
   
   const startDateStr = format(start, "yyyy-MM-dd");
   const endDateStr = format(end, "yyyy-MM-dd");
   
-  return await getMachineInsights(startDateStr, endDateStr);
-}
-
-/**
- * Mendapatkan insight untuk laporan bulanan berdasarkan month_year string (e.g. "4-2026")
- */
-export async function getMonthlyInsightsByMonthYear(monthYearStr: string) {
-  // Parsing "M-YYYY" to Date
-  const parts = monthYearStr.split("-");
-  if (parts.length !== 2) return [];
-  
-  const monthIndex = parseInt(parts[0], 10) - 1;
-  const year = parseInt(parts[1], 10);
-  
-  const dateObj = new Date(year, monthIndex, 1);
-  const start = startOfMonth(dateObj);
-  const end = endOfMonth(dateObj);
-  
-  const startDateStr = format(start, "yyyy-MM-dd");
-  const endDateStr = format(end, "yyyy-MM-dd");
-  
-  return await getMachineInsights(startDateStr, endDateStr);
+  return await getDetailedMachineInsights(startDateStr, endDateStr);
 }

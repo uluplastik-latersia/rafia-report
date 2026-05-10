@@ -2,8 +2,6 @@ import { db } from "@/lib/db";
 import { Package, ClipboardList, TimerReset, Settings, Zap, ArrowRight, Grid, PlusCircle, Trash2, Truck, BookOpen } from "lucide-react";
 import Link from "next/link";
 import CloseBookButton from "./CloseBookButton";
-import InsightMesin from "./InsightMesin";
-
 // Force dynamic since dashboard data updates frequently
 export const dynamic = "force-dynamic";
 
@@ -156,10 +154,24 @@ export default async function Dashboard() {
             <ArrowRight className="w-5 h-5 text-emerald-600" />
           </Link>
         </div>
+        <div className="mt-3">
+          <Link
+            href="/insight-mesin"
+            className="bg-amber-50 border-2 border-amber-500 rounded-2xl p-4 flex items-center justify-between active:scale-95 transition-transform shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-amber-100 text-amber-600 p-3 rounded-xl">
+                <Settings className="w-6 h-6" />
+              </div>
+              <div className="text-left">
+                 <h3 className="font-bold text-gray-900 text-sm">Insight Mesin</h3>
+                 <p className="text-xs text-foreground-muted">Pantau rata-rata & performa harian per-mesin</p>
+              </div>
+            </div>
+            <ArrowRight className="w-5 h-5 text-amber-600" />
+          </Link>
+        </div>
       </section>
-
-      {/* INSIGHT MESIN */}
-      <InsightMesin />
 
     </div>
   );
