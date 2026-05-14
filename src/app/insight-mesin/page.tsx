@@ -10,7 +10,7 @@ export default async function InsightMesinPage() {
   const data = await getCurrentWeekInsights();
 
   return (
-    <div className="space-y-6 pb-12 max-w-lg lg:max-w-6xl mx-auto">
+    <div className="space-y-6 pb-12 w-full lg:max-w-6xl xl:max-w-[95%] 2xl:max-w-[1800px] mx-auto px-4 lg:px-8">
       {/* HEADER */}
       <div className="flex items-center gap-4 bg-surface p-4 lg:p-6 lg:px-8 rounded-b-3xl shadow-sm border-b border-border">
         <Link href="/" className="p-2 bg-background border border-border rounded-xl active:scale-95 transition-transform">

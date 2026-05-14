@@ -163,7 +163,7 @@ _Laporan di-Buat secara otomatis oleh Sistem._`;
   const adminName = shift.admin_name && shift.admin_name !== '-' ? shift.admin_name : "Admin";
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-6 print:p-0 print:m-0 print:max-w-none print:w-full slide-in">
+    <div className="w-full xl:max-w-[95%] 2xl:max-w-[1800px] mx-auto p-4 md:p-6 print:p-0 print:m-0 print:max-w-none print:w-full slide-in">
 
       {/* HEADER CETAK (Tampil jelas di print) */}
       <div className="text-center mb-2 pb-1 border-b-2 border-black hidden print:block">
