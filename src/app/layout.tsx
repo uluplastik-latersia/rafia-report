@@ -40,7 +40,7 @@ export default function RootLayout({
         <PwaRegister />
         {/* APP BAR (Header) */}
         <header className="bg-primary text-white p-4 shadow-md sticky top-0 z-50 print:hidden">
-          <div className="max-w-md mx-auto flex items-center justify-between">
+          <div className="w-full max-w-md lg:max-w-[95%] xl:max-w-[1800px] mx-auto flex items-center justify-between">
             <h1 className="text-xl font-bold tracking-wide">📦 Rafia UPL</h1>
             <div className="flex items-center gap-3">
               <Link href="/" className="bg-white/20 p-2 rounded-full hover:bg-white/30 active:scale-95 transition-all text-white">
@@ -54,7 +54,7 @@ export default function RootLayout({
         </header>
 
         {/* MAIN CONTENT AREA */}
-        <main className="max-w-md mx-auto p-4 w-full print:max-w-none print:w-full print:p-0">
+        <main className="w-full max-w-md lg:max-w-[95%] xl:max-w-[1800px] mx-auto p-4 lg:p-8 print:max-w-none print:w-full print:p-0">
           {children}
         </main>
       </body>

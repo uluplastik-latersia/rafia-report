@@ -45,7 +45,7 @@ export default async function Dashboard() {
           Ringkasan Database
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
           <div className="bg-primary/10 rounded-xl p-4 flex justify-between items-center border border-primary/20">
             <div>
               <p className="text-sm font-medium text-primary-dark">Stok Gudang Total</p>
@@ -91,7 +91,7 @@ export default async function Dashboard() {
           Aksi Cepat Menu
         </h2>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6">
           {/* Menu 1: Command Center */}
           <Link
             href="/shift"
@@ -137,7 +137,7 @@ export default async function Dashboard() {
           </Link>
         </div>
 
-        <div className="mt-3">
+        <div className="mt-3 lg:mt-6 grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-6">
           <Link
             href="/laporan-bulanan"
             className="bg-emerald-50 border-2 border-emerald-500 rounded-2xl p-4 flex items-center justify-between active:scale-95 transition-transform shadow-sm"
@@ -153,8 +153,6 @@ export default async function Dashboard() {
             </div>
             <ArrowRight className="w-5 h-5 text-emerald-600" />
           </Link>
-        </div>
-        <div className="mt-3">
           <Link
             href="/insight-mesin"
             className="bg-amber-50 border-2 border-amber-500 rounded-2xl p-4 flex items-center justify-between active:scale-95 transition-transform shadow-sm"
