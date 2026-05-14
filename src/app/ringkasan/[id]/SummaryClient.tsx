@@ -163,7 +163,7 @@ _Laporan di-Buat secara otomatis oleh Sistem._`;
   const adminName = shift.admin_name && shift.admin_name !== '-' ? shift.admin_name : "Admin";
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-6 print:p-0 print:m-0 print:max-w-none print:w-full slide-in">
+    <div className="max-w-7xl mx-auto p-4 md:p-6 print:p-0 print:m-0 print:max-w-none print:w-full slide-in">
 
       {/* HEADER CETAK (Tampil jelas di print) */}
       <div className="text-center mb-2 pb-1 border-b-2 border-black hidden print:block">
@@ -171,7 +171,7 @@ _Laporan di-Buat secara otomatis oleh Sistem._`;
         <p suppressHydrationWarning className="text-[9pt] font-medium">Tgl Dibuka: {wktBuka.d} - {wktBuka.t} WIB | Pencatat: <strong>{adminName}</strong></p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 print:block print:w-full">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 print:block print:w-full">
         {/* KOLOM KIRI: ACTION BUTTONS */}
         <div className="lg:col-span-1 space-y-6 print:hidden">
 
@@ -215,7 +215,7 @@ _Laporan di-Buat secara otomatis oleh Sistem._`;
         </div>
 
         {/* KOLOM KANAN: DOKUMEN PREVIEW (PRINTABLE ZONE) */}
-        <div className="lg:col-span-2 bg-white text-black p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 print:shadow-none print:border-none print:p-0 print:block print:w-full overflow-hidden">
+        <div className="lg:col-span-3 bg-white text-black p-6 md:p-8 rounded-2xl shadow-md border border-gray-200 print:shadow-none print:border-none print:p-0 print:block print:w-full overflow-hidden">
 
           <div className="flex flex-wrap justify-between items-center bg-gray-50 border border-gray-400 print:border-black p-2 mb-3 text-center print:bg-transparent print:rounded-none rounded-xl gap-2">
             <div className="flex-1"><span className="text-[9pt] font-bold text-gray-500 print:text-black uppercase block md:inline md:mr-1">Total Roll:</span><strong className="text-[11pt]">{totalRollsCount}</strong></div>
@@ -231,7 +231,7 @@ _Laporan di-Buat secara otomatis oleh Sistem._`;
                 <tr className="border-b border-gray-400 print:border-black">
                   <th className="p-2 text-center border-r border-gray-400 print:border-black font-bold print:w-16">Mesin</th>
                   <th className="p-2 text-center border-r border-gray-400 print:border-black font-bold print:w-24">Operator</th>
-                  <th className="p-2 text-center border-r border-gray-400 print:border-black font-bold">Rincian Berat Tiap Roll (kg)</th>
+                  <th className="p-2 text-center border-r border-gray-400 print:border-black font-bold min-w-[250px] print:min-w-0">Rincian Berat Tiap Roll (kg)</th>
                   <th className="p-2 text-center border-r border-gray-400 print:border-black font-bold print:w-14">roll</th>
                   <th className="p-2 text-center border-r border-gray-400 print:border-black font-bold print:w-20">Total (KG)</th>
                   <th className="p-2 text-center border-r border-gray-400 print:border-black font-bold print:w-20">Afalan</th>
