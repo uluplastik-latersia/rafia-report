@@ -10,9 +10,9 @@ export default async function InsightMesinPage() {
   const data = await getCurrentWeekInsights();
 
   return (
-    <div className="space-y-6 pb-12 max-w-lg mx-auto">
+    <div className="space-y-6 pb-12 max-w-lg lg:max-w-6xl mx-auto">
       {/* HEADER */}
-      <div className="flex items-center gap-4 bg-surface p-4 rounded-b-3xl shadow-sm border-b border-border">
+      <div className="flex items-center gap-4 bg-surface p-4 lg:p-6 lg:px-8 rounded-b-3xl shadow-sm border-b border-border">
         <Link href="/" className="p-2 bg-background border border-border rounded-xl active:scale-95 transition-transform">
           <ArrowLeft className="w-5 h-5 text-foreground-muted" />
         </Link>
@@ -25,10 +25,10 @@ export default async function InsightMesinPage() {
         </div>
       </div>
 
-      <div className="px-4 space-y-6">
+      <div className="px-4 lg:px-8 space-y-6 lg:space-y-0 lg:grid lg:grid-cols-12 lg:gap-8 lg:items-start">
         
         {/* RATA-RATA MINGGUAN */}
-        <section className="bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow-sm">
+        <section className="bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow-sm lg:col-span-4 lg:sticky lg:top-6">
           <h2 className="text-sm font-bold text-amber-900 mb-4 flex items-center gap-2">
             <BarChart2 className="w-5 h-5" />
             Rata-rata Mingguan (Per Hari)
@@ -64,7 +64,7 @@ export default async function InsightMesinPage() {
         </section>
 
         {/* DATA HARIAN */}
-        <section className="space-y-4">
+        <section className="space-y-4 lg:col-span-8">
           <h2 className="text-sm font-bold text-foreground-muted flex items-center gap-2 pl-1">
             <Calendar className="w-4 h-4" />
             Riwayat Harian (Minggu Ini)
@@ -86,7 +86,7 @@ export default async function InsightMesinPage() {
                   </h3>
                 </div>
 
-                <div className="grid grid-cols-2 gap-x-2 gap-y-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-2 gap-y-3 lg:gap-x-4 lg:gap-y-4">
                   {day.machines.map((machine) => (
                     <div key={machine.machineNumber} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
                       <div className="font-bold text-gray-800 text-xs mb-2 pb-1 border-b border-gray-200">
