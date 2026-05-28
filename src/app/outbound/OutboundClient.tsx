@@ -210,6 +210,11 @@ export default function OutboundClient({ inStockRolls, sales, shiftsWithStock }:
           router.push(`/outbound/${result.saleId}`);
         }
       } catch (err: any) {
+        if (err.message && err.message.includes("was not found on the server")) {
+          setError("Sesi tidak sinkron dengan server. Memuat ulang halaman...");
+          setTimeout(() => window.location.reload(), 1500);
+          return;
+        }
         setError(err.message || "Terjadi kesalahan saat menyimpan.");
       }
     });
