@@ -99,7 +99,7 @@ export default function SummaryClient({
 *2. HASIL PRODUKSI*
 • Pencatat: ${shift.admin_name && shift.admin_name !== '-' ? shift.admin_name : 'Admin'}
 • Total Roll: ${totalRollsCount} roll
-• Berat Produksi: ${totalRollsKg.toFixed(1)} kg
+• *Berat Produksi: ${totalRollsKg.toFixed(1)} kg*
 • Jumlah Operator: ${totalOperators} orang
 
 *3. PEMAKAIAN BAHAN BAKU*
