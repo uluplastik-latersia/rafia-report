@@ -137,7 +137,7 @@ export default async function Dashboard() {
           </Link>
         </div>
 
-        <div className="mt-3 lg:mt-6 grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-6">
+        <div className="mt-3 lg:mt-6 grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-6">
           <Link
             href="/laporan-bulanan"
             className="bg-emerald-50 border-2 border-emerald-500 rounded-2xl p-4 flex items-center justify-between active:scale-95 transition-transform shadow-sm"
@@ -167,6 +167,21 @@ export default async function Dashboard() {
               </div>
             </div>
             <ArrowRight className="w-5 h-5 text-amber-600" />
+          </Link>
+          <Link
+            href="/koreksi-data"
+            className="bg-red-50 border-2 border-red-500 rounded-2xl p-4 flex items-center justify-between active:scale-95 transition-transform shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-red-100 text-red-600 p-3 rounded-xl">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div className="text-left">
+                 <h3 className="font-bold text-gray-900 text-sm">Koreksi Data Roll</h3>
+                 <p className="text-xs text-foreground-muted">Hapus data roll produksi yang salah input</p>
+              </div>
+            </div>
+            <ArrowRight className="w-5 h-5 text-red-600" />
           </Link>
         </div>
       </section>
