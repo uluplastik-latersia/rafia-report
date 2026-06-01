@@ -1,11 +1,23 @@
 "use client";
 
-import { useState, useEffect, useRef, useTransition } from "react";
+import { useState, useEffect, useRef, useTransition, useCallback } from "react";
 import { openShift } from "@/actions/shift";
 import { submitRoll, deleteRoll } from "@/actions/inbound";
 import { upsertMachineWaste } from "@/actions/waste";
 import { useRouter } from "next/navigation";
-import { Save, Trash2, Box, RotateCcw, X, LogOut } from "lucide-react";
+import { Save, Trash2, Box, RotateCcw, X, LogOut, WifiOff, Clock } from "lucide-react";
+import { addPendingRoll, getPendingRolls, removePendingRoll, addPendingWaste, type PendingRoll } from "@/lib/offlineDb";
+import { useSyncManager } from "@/lib/useSyncManager";
+
+// Helper: Generate 3 Huruf Random Kapital (sama dengan server-side)
+function generateRandomLetters(): string {
+  const chars = "BCDFGHJKLMNPQRSTVWXYZ";
+  let result = "";
+  for (let i = 0; i < 3; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
 
 export default function ShiftClient({
   activeShift,
@@ -20,11 +32,16 @@ export default function ShiftClient({
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const { isOnline, pendingCount, refreshPendingCount, registerBackgroundSync, lastSyncEvent } = useSyncManager();
   const [loading, setLoading] = useState(false);
   const [activeMachine, setActiveMachine] = useState<number>(1);
 
   // State Input Roll
   const [weightStr, setWeightStr] = useState<string>("");
+
+  // Offline State
+  const [offlinePendingRolls, setOfflinePendingRolls] = useState<PendingRoll[]>([]);
+  const [offlineNotification, setOfflineNotification] = useState<string | null>(null);
   const [operatorCode, setOperatorCode] = useState<string>("");
 
   // State Waste Sementara (untuk UI & debouncing auto-save)
@@ -41,6 +58,15 @@ export default function ShiftClient({
   const [adminName, setAdminName] = useState("");
   const [karyawan, setKaryawan] = useState(0);
   const [afalanPeletSak, setAfalanPeletSak] = useState(0);
+
+  // Load pending rolls dari IndexedDB
+  const loadPendingRolls = useCallback(async () => {
+    if (!activeShift) return;
+    try {
+      const pending = await getPendingRolls();
+      setOfflinePendingRolls(pending.filter(r => r.session_id === activeShift.id));
+    } catch { /* IndexedDB belum tersedia */ }
+  }, [activeShift]);
 
   // Inisialisasi Waste State dari Server Data
   useEffect(() => {
@@ -63,7 +89,16 @@ export default function ShiftClient({
     const memOp = localStorage.getItem(`shiftOp_${memMachine || 1}`);
     if (memOp) setOperatorCode(memOp);
 
-  }, [activeShift, wastes]);
+    // Load pending offline rolls
+    loadPendingRolls();
+  }, [activeShift, wastes, loadPendingRolls]);
+
+  // Refresh pending rolls saat sync selesai
+  useEffect(() => {
+    if (lastSyncEvent > 0) {
+      loadPendingRolls();
+    }
+  }, [lastSyncEvent, loadPendingRolls]);
 
   // Handler Buka Shift
   const handleOpenShift = async () => {
@@ -92,7 +127,7 @@ export default function ShiftClient({
     localStorage.setItem(`shiftOp_${activeMachine}`, code);
   };
 
-  // Auto-Save Waste Handlers
+  // Auto-Save Waste Handlers (with offline support)
   const handleWasteChange = (key: 'afalan' | 'prongkalan', value: string) => {
     setLocalWastes(prev => ({
       ...prev,
@@ -102,41 +137,118 @@ export default function ShiftClient({
     // Debounce Save to Server
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(async () => {
-      try {
-        await upsertMachineWaste({
-          session_id: activeShift.id,
-          machine_number: activeMachine,
-          // Mengambil nilai terbaru langsung dari state parameter yang akan dirender (pakai state terbaru jika ada)
-          afalan_kg: key === 'afalan' ? Number(value) : Number(localWastes[activeMachine]?.afalan || 0),
-          prongkalan_kg: key === 'prongkalan' ? Number(value) : Number(localWastes[activeMachine]?.prongkalan || 0),
-        });
-        // Tidak perlu router.refresh() karena state lokal sudah sinkron
-      } catch (e: any) {
-        console.error("Gagal auto-save waste", e);
+      const wasteData = {
+        session_id: activeShift.id,
+        machine_number: activeMachine,
+        afalan_kg: key === 'afalan' ? Number(value) : Number(localWastes[activeMachine]?.afalan || 0),
+        prongkalan_kg: key === 'prongkalan' ? Number(value) : Number(localWastes[activeMachine]?.prongkalan || 0),
+      };
+
+      if (!navigator.onLine) {
+        // OFFLINE: Simpan ke IndexedDB
+        try {
+          await addPendingWaste({
+            id: `${activeShift.id}_${activeMachine}`,
+            ...wasteData,
+            created_at: new Date().toISOString(),
+          });
+          await registerBackgroundSync("sync-wastes");
+          await refreshPendingCount();
+        } catch (e: any) {
+          console.error("Gagal simpan waste offline", e);
+        }
+        return;
       }
-    }, 1500); // 1.5 second debounce
+
+      try {
+        await upsertMachineWaste(wasteData);
+      } catch (e: any) {
+        // Fallback ke offline jika server action gagal
+        console.error("Gagal auto-save waste, menyimpan offline", e);
+        try {
+          await addPendingWaste({
+            id: `${activeShift.id}_${activeMachine}`,
+            ...wasteData,
+            created_at: new Date().toISOString(),
+          });
+          await registerBackgroundSync("sync-wastes");
+          await refreshPendingCount();
+        } catch { /* silent */ }
+      }
+    }, 1500);
   };
 
-  // Handler Simpan Roll
+  // Handler Simpan Roll (with offline fallback)
   const handleSaveRoll = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!weightStr || !operatorCode) return;
 
     setLoading(true);
+    const weight = parseFloat(weightStr);
+    if (isNaN(weight) || weight <= 0) {
+      alert("Berat tidak valid!");
+      setLoading(false);
+      return;
+    }
+
+    const rollData = {
+      weight_kg: weight,
+      operator_code: operatorCode,
+      machine_number: activeMachine,
+      session_id: activeShift.id,
+    };
+
+    // === OFFLINE PATH ===
+    if (!navigator.onLine) {
+      try {
+        const rollId = crypto.randomUUID();
+        const rollCode = `${generateRandomLetters()}-${weight}-${operatorCode}`;
+        const pendingRoll: PendingRoll = {
+          id: rollId,
+          roll_code: rollCode,
+          ...rollData,
+          created_at: new Date().toISOString(),
+        };
+        await addPendingRoll(pendingRoll);
+        await registerBackgroundSync("sync-rolls");
+        await refreshPendingCount();
+        setOfflinePendingRolls(prev => [pendingRoll, ...prev]);
+        setWeightStr("");
+        setOfflineNotification("Sinyal terputus. Data tersimpan di HP (Menunggu Sinkronisasi) 💾");
+        setTimeout(() => setOfflineNotification(null), 5000);
+      } catch (err: any) {
+        alert("Gagal menyimpan data offline: " + err.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // === ONLINE PATH ===
     try {
-      const weight = parseFloat(weightStr);
-      if (isNaN(weight) || weight <= 0) throw new Error("Berat tidak valid!");
-
-      await submitRoll({
-        weight_kg: weight,
-        operator_code: operatorCode,
-        machine_number: activeMachine,
-        session_id: activeShift.id,
-      });
-
-      setWeightStr(""); // Kosongkan cuma angkanya
+      await submitRoll(rollData);
+      setWeightStr("");
     } catch (err: any) {
-      alert("Error: " + err.message);
+      // Fallback: mungkin koneksi terputus saat mengirim
+      try {
+        const rollId = crypto.randomUUID();
+        const rollCode = `${generateRandomLetters()}-${weight}-${operatorCode}`;
+        const pendingRoll: PendingRoll = {
+          id: rollId,
+          roll_code: rollCode,
+          ...rollData,
+          created_at: new Date().toISOString(),
+        };
+        await addPendingRoll(pendingRoll);
+        await registerBackgroundSync("sync-rolls");
+        await refreshPendingCount();
+        setOfflinePendingRolls(prev => [pendingRoll, ...prev]);
+        setWeightStr("");
+        setOfflineNotification("Sinyal terputus. Data tersimpan di HP (Menunggu Sinkronisasi) 💾");
+        setTimeout(() => setOfflineNotification(null), 5000);
+      } catch (fallbackErr: any) {
+        alert("Error: " + err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -194,8 +306,10 @@ export default function ShiftClient({
 
   // Filter Rolls & Stats untuk Mesin Aktif
   const machineRolls = rolls.filter(r => r.machine_number === activeMachine);
-  const totalMachineRolls = machineRolls.length;
-  const totalMachineWeight = machineRolls.reduce((acc, curr) => acc + curr.weight_kg, 0);
+  const pendingMachineRolls = offlinePendingRolls.filter(r => r.machine_number === activeMachine);
+  const allMachineRolls = [...pendingMachineRolls, ...machineRolls]; // Pending rolls first
+  const totalMachineRolls = allMachineRolls.length;
+  const totalMachineWeight = allMachineRolls.reduce((acc, curr) => acc + curr.weight_kg, 0);
 
   return (
     <div className="space-y-4">
@@ -214,6 +328,22 @@ export default function ShiftClient({
           <LogOut className="w-4 h-4" /> Tutup Shift
         </button>
       </div>
+
+      {/* OFFLINE NOTIFICATION BANNER */}
+      {offlineNotification && (
+        <div className="bg-amber-50 border-2 border-amber-400 rounded-xl p-3 flex items-center gap-3 animate-slide-down">
+          <WifiOff className="w-5 h-5 text-amber-600 flex-shrink-0" />
+          <p className="text-sm font-medium text-amber-800">{offlineNotification}</p>
+        </div>
+      )}
+
+      {/* OFFLINE STATUS BAR */}
+      {!isOnline && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-2 flex items-center justify-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse-slow" />
+          <span className="text-xs font-semibold text-red-700">Mode Offline — Data akan otomatis tersinkronisasi saat sinyal kembali</span>
+        </div>
+      )}
 
       {/* TABS MESIN */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
@@ -342,14 +472,38 @@ export default function ShiftClient({
           Riwayat Roll Mesin {activeMachine}
         </h2>
 
-        {machineRolls.length === 0 ? (
+        {allMachineRolls.length === 0 ? (
           <p className="text-xs text-center text-foreground-muted py-8 bg-surface rounded-xl border border-dashed border-border">
             Belum ada roll di-input untuk mesin ini.
           </p>
         ) : (
           <div className="space-y-2">
+            {/* PENDING ROLLS (offline) */}
+            {pendingMachineRolls.map((roll) => (
+              <div
+                key={roll.id}
+                className="p-3 rounded-xl border-2 border-dashed border-amber-300 bg-amber-50/60 flex items-center justify-between shadow-sm"
+              >
+                <div>
+                  <h4 className="font-mono font-bold text-amber-700 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5" />
+                    {roll.roll_code}
+                  </h4>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-xs text-amber-600">Op: {roll.operator_code}</p>
+                    <span className="text-[10px] bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-sm font-bold">
+                      ⏳ Menunggu Sinkronisasi
+                    </span>
+                  </div>
+                </div>
+                <span className="font-black text-lg text-amber-700">
+                  {roll.weight_kg} <span className="text-xs font-normal opacity-70">kg</span>
+                </span>
+              </div>
+            ))}
+
+            {/* SYNCED ROLLS (from server) */}
             {machineRolls.map((roll) => {
-              // Quality Control Logic: Highlight if > 75.99kg
               const isFailedQC = roll.weight_kg > 75.99;
               return (
                 <div
