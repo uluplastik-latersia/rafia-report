@@ -4,6 +4,7 @@ import { useState } from "react";
 import { closeShift } from "@/actions/shift";
 import { useRouter } from "next/navigation";
 import { Printer, Copy, CheckCircle, AlertTriangle, Check } from "lucide-react";
+import Link from "next/link";
 
 // Helper konversi format SQLite UTC ke Timezone WIB Indonesia (Format 24 Jam)
 function parseWkt(dbDate: string | null) {
@@ -187,7 +188,7 @@ _Laporan di-Buat secara otomatis oleh Sistem._`;
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 mb-3">
             <button
               type="button"
               onClick={() => window.print()}
@@ -211,6 +212,17 @@ _Laporan di-Buat secara otomatis oleh Sistem._`;
                     "Copy WA Laporan"}
               </span>
             </button>
+          </div>
+          
+          <div className="grid grid-cols-1">
+            <Link
+              href={`/ringkasan/${shift.id}/detail-roll?autoPrint=true`}
+              target="_blank"
+              className="py-4 bg-purple-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm cursor-pointer touch-manipulation"
+            >
+              <Printer className="w-5 h-5" />
+              <span>Print Detail Roll</span>
+            </Link>
           </div>
         </div>
 
