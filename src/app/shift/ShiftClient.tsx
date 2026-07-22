@@ -347,7 +347,7 @@ export default function ShiftClient({
 
       {/* TABS MESIN */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        {[1, 2, 3, 4, 5, 6, 7].map(m => (
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(m => (
           <button
             key={m}
             onClick={() => changeTab(m)}

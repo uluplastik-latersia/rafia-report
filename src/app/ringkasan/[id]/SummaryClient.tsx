@@ -251,7 +251,7 @@ _Laporan di-Buat secara otomatis oleh Sistem._`;
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-300 print:divide-black">
-                {[1, 2, 3, 4, 5, 6, 7].map(m => {
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(m => {
                   const mRolls = rolls.filter(r => r.machine_number === m);
                   if (mRolls.length === 0) return null; // Sembunyikan mesin non-aktif
 

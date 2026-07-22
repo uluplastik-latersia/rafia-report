@@ -67,7 +67,7 @@ export async function getDetailedMachineInsights(startDateStr: string, endDateSt
     const initDate = (date: string) => {
       if (!dataByDate[date]) {
         dataByDate[date] = {};
-        for (let i = 1; i <= 7; i++) {
+        for (let i = 1; i <= 10; i++) {
           dataByDate[date][i] = { prod: 0, waste: 0 };
         }
       }
@@ -79,7 +79,7 @@ export async function getDetailedMachineInsights(startDateStr: string, endDateSt
       const machine = Number(row.machine_number);
       const weight = Number(row.total_produksi);
       initDate(date);
-      if (machine >= 1 && machine <= 7) {
+      if (machine >= 1 && machine <= 10) {
         dataByDate[date][machine].prod = weight;
       }
     }
@@ -90,7 +90,7 @@ export async function getDetailedMachineInsights(startDateStr: string, endDateSt
       const machine = Number(row.machine_number);
       const waste = Number(row.total_afalan);
       initDate(date);
-      if (machine >= 1 && machine <= 7) {
+      if (machine >= 1 && machine <= 10) {
         dataByDate[date][machine].waste = waste;
       }
     }
@@ -100,15 +100,15 @@ export async function getDetailedMachineInsights(startDateStr: string, endDateSt
     const sortedDates = Object.keys(dataByDate).sort();
 
     // Kalkulasi total untuk rata-rata
-    const totalProdPerMachine: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
-    const totalWastePerMachine: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
+    const totalProdPerMachine: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0 };
+    const totalWastePerMachine: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0 };
     const daysCount = sortedDates.length;
 
     for (const date of sortedDates) {
       const dayData = dataByDate[date];
       const machines: MachineData[] = [];
       
-      for (let i = 1; i <= 7; i++) {
+      for (let i = 1; i <= 10; i++) {
         const prod = dayData[i].prod;
         const waste = dayData[i].waste;
         
@@ -127,7 +127,7 @@ export async function getDetailedMachineInsights(startDateStr: string, endDateSt
 
     // Kalkulasi rata-rata (hanya jika ada hari berjalan)
     const averages: WeeklyAverage[] = [];
-    for (let i = 1; i <= 7; i++) {
+    for (let i = 1; i <= 10; i++) {
       averages.push({
         machineNumber: i,
         avgProductionKg: daysCount > 0 ? totalProdPerMachine[i] / daysCount : 0,
