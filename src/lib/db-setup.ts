@@ -144,6 +144,7 @@ const OPERATORS = [
   { name: "BAMBANG",    code: "BG"  },
   { name: "IMALUL",     code: "IL"  },
   { name: "ZAINAL",     code: "ZL"  },
+  { name: "DEDIK",      code: "DK"  },
   { name: "NICOLAS",    code: "NS"  },
   { name: "MAHBUBI",    code: "MBI" },
   { name: "FARUQ",      code: "FQ"  },
