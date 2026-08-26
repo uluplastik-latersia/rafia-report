@@ -25,6 +25,7 @@ export const metadata: Metadata = {
   },
 };
 
+import pkg from "../../package.json";
 import { PwaRegister } from "./PwaRegister";
 import { OnlineStatus } from "./OnlineStatus";
 import Link from "next/link";
@@ -49,7 +50,7 @@ export default function RootLayout({
                 <Home className="w-4 h-4" />
               </Link>
               <div className="text-xs bg-white/20 px-2 py-1 rounded-full backdrop-blur-sm">
-                <span className="font-semibold">V 1.1</span>
+                <span className="font-semibold">V {pkg.version}</span>
               </div>
             </div>
           </div>
