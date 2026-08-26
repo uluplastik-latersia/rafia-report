@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { Printer, Share2 } from "lucide-react";
+import React, { useState } from "react";
+import { Printer, Share2, Search, CheckCircle2, XCircle, Truck, RotateCcw, Check } from "lucide-react";
 
 type SaleItem = {
   id: string;
@@ -54,6 +54,23 @@ export default function SaleDetailClient({ sale, items }: { sale: Sale; items: S
   const wkt = parseWkt(sale.sale_datetime);
   const sjNumber = generateSJNumber(sale.id, sale.sale_datetime);
 
+  // --- STATE DEDIKASI VERIFIKASI PEMUATAN ---
+  const [searchQuery, setSearchQuery] = useState("");
+  const [lastSearchResult, setLastSearchResult] = useState<{
+    status: "idle" | "found" | "not_found";
+    item: SaleItem | null;
+    index: number;
+    searchedCode: string;
+  }>({
+    status: "idle",
+    item: null,
+    index: -1,
+    searchedCode: "",
+  });
+
+  // State pencatatan roll terverifikasi (Checked)
+  const [checkedIds, setCheckedIds] = useState<string[]>([]);
+
   const handlePrint = () => window.print();
 
   const handleShareWA = () => {
@@ -91,7 +108,57 @@ Dokumen ini dihasilkan oleh Sistem PWA Stok Rafia UPL.`;
     document.body.removeChild(ta);
   }
 
-  // Buat baris tabel — 6 pasang [No, Kode] per baris, urutan kiri ke kanan
+  // Lakukan Pengecekan Kode Roll
+  const handleVerify = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanQuery = searchQuery.trim().toUpperCase();
+    if (!cleanQuery) return;
+
+    // Cari di dalam array items (exact / partial match)
+    const foundIdx = items.findIndex(
+      (item) => item.roll_code.toUpperCase() === cleanQuery || item.roll_code.toUpperCase().includes(cleanQuery)
+    );
+
+    if (foundIdx !== -1) {
+      const foundItem = items[foundIdx];
+      setLastSearchResult({
+        status: "found",
+        item: foundItem,
+        index: foundIdx + 1,
+        searchedCode: cleanQuery,
+      });
+
+      // Otomatis tandai sebagai checked jika belum
+      if (!checkedIds.includes(foundItem.id)) {
+        setCheckedIds((prev) => [...prev, foundItem.id]);
+      }
+    } else {
+      setLastSearchResult({
+        status: "not_found",
+        item: null,
+        index: -1,
+        searchedCode: cleanQuery,
+      });
+    }
+  };
+
+  const handleResetSearch = () => {
+    setSearchQuery("");
+    setLastSearchResult({
+      status: "idle",
+      item: null,
+      index: -1,
+      searchedCode: "",
+    });
+  };
+
+  const toggleCheckRoll = (id: string) => {
+    setCheckedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  // Buat baris tabel — 6 pasang [No, Kode] per baris
   const colPairs = 6;
   const tableRows: (SaleItem | null)[][] = [];
   for (let i = 0; i < items.length; i += colPairs) {
@@ -102,22 +169,141 @@ Dokumen ini dihasilkan oleh Sistem PWA Stok Rafia UPL.`;
     tableRows.push(row);
   }
 
+  const checkedCount = checkedIds.length;
+  const progressPct = items.length > 0 ? Math.round((checkedCount / items.length) * 100) : 0;
+
   return (
     <div className="space-y-4">
-      {/* ACTION BUTTONS */}
-      <div className="flex gap-3 print:hidden">
-        <button
-          onClick={handlePrint}
-          className="flex-1 bg-primary text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-md"
-        >
-          <Printer className="w-5 h-5" /> Cetak A4
-        </button>
-        <button
-          onClick={handleShareWA}
-          className="flex-1 bg-emerald-600 text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-md"
-        >
-          <Share2 className="w-5 h-5" /> Copy WA
-        </button>
+      {/* ACTION BUTTONS & VERIFIKASI PEMUATAN */}
+      <div className="space-y-4 print:hidden">
+        {/* UTILITY BUTTONS */}
+        <div className="flex gap-3">
+          <button
+            onClick={handlePrint}
+            className="flex-1 bg-primary text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-md"
+          >
+            <Printer className="w-5 h-5" /> Cetak A4
+          </button>
+          <button
+            onClick={handleShareWA}
+            className="flex-1 bg-emerald-600 text-white font-bold py-3.5 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-md"
+          >
+            <Share2 className="w-5 h-5" /> Copy WA
+          </button>
+        </div>
+
+        {/* KOTAK PROSES PEMUATAN / CEK KODE ROLL */}
+        <div className="bg-surface border border-border rounded-2xl p-4 sm:p-5 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-3">
+            <div className="flex items-center gap-2">
+              <div className="bg-amber-100 p-2 rounded-xl text-amber-700">
+                <Truck className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="font-bold text-foreground text-base">Pengecekan Roll (Pemuatan Truk)</h2>
+                <p className="text-xs text-foreground-muted">Ketik/scan kode roll saat dimasukkan ke truk kustomer</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 self-start sm:self-auto bg-background px-3 py-1.5 rounded-xl border border-border">
+              <span className="text-xs text-foreground-muted font-medium">Terverifikasi:</span>
+              <span className="text-sm font-bold text-primary">{checkedCount} / {items.length} Roll</span>
+              <span className="text-xs font-semibold text-emerald-600">({progressPct}%)</span>
+            </div>
+          </div>
+
+          {/* FORM CARI / CEK ROLL */}
+          <form onSubmit={handleVerify} className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-foreground-muted" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cari / Scan Kode Roll (contoh: BPG-71.2-KON)..."
+                className="w-full bg-background border border-border rounded-xl pl-11 pr-10 py-3 text-sm font-mono font-semibold uppercase placeholder:font-sans placeholder:normal-case placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={handleResetSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground p-1"
+                >
+                  <XCircle className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <button
+              type="submit"
+              className="bg-primary hover:bg-primary-dark text-white font-bold px-5 rounded-xl flex items-center justify-center gap-1.5 shrink-0 text-sm shadow-sm active:scale-95 transition-all"
+            >
+              Cek Roll
+            </button>
+          </form>
+
+          {/* BANNER HASIL HASIL PENGECEKAN */}
+          {lastSearchResult.status === "found" && lastSearchResult.item && (
+            <div className="bg-emerald-50 border-2 border-emerald-500 rounded-xl p-4 slide-in">
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
+                <div className="space-y-1 flex-1">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="bg-emerald-600 text-white font-bold text-xs px-2.5 py-0.5 rounded-md uppercase tracking-wider">
+                      ✅ ROLL VALID (NO. #{lastSearchResult.index})
+                    </span>
+                    <span className="text-xs font-semibold text-emerald-800">
+                      Terdaftar di Surat Jalan ini
+                    </span>
+                  </div>
+                  <p className="text-lg font-bold font-mono text-emerald-950">
+                    {lastSearchResult.item.roll_code}
+                  </p>
+                  <div className="grid grid-cols-3 gap-2 text-xs font-medium text-emerald-800 bg-white/70 p-2 rounded-lg border border-emerald-200">
+                    <div>Berat: <strong className="text-emerald-950">{lastSearchResult.item.weight_kg} kg</strong></div>
+                    <div>Mesin: <strong className="text-emerald-950">Mesin {lastSearchResult.item.machine_number}</strong></div>
+                    <div>Operator: <strong className="text-emerald-950">{lastSearchResult.item.operator_code}</strong></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {lastSearchResult.status === "not_found" && (
+            <div className="bg-red-50 border-2 border-red-500 rounded-xl p-4 slide-in">
+              <div className="flex items-start gap-3">
+                <XCircle className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <span className="bg-red-600 text-white font-bold text-xs px-2.5 py-0.5 rounded-md uppercase tracking-wider">
+                    🚨 PERINGATAN: KODE ROLL TIDAK DITEMUKAN!
+                  </span>
+                  <p className="text-base font-bold text-red-950">
+                    Kode &quot;<span className="font-mono">{lastSearchResult.searchedCode}</span>&quot; TIDAK ADA di Surat Jalan ini!
+                  </p>
+                  <p className="text-xs font-semibold text-red-800">
+                    JANGAN dimasukkan ke truk kustomer ini. Mohon periksa kembali kode atau fisik roll.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* PROGRESS BAR & CLEAR BUTTON */}
+          {checkedCount > 0 && (
+            <div className="flex items-center justify-between gap-3 text-xs border-t border-border pt-3">
+              <div className="flex-1 bg-background rounded-full h-2.5 overflow-hidden border border-border">
+                <div
+                  className="bg-emerald-500 h-full transition-all duration-300"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+              <button
+                onClick={() => setCheckedIds([])}
+                className="text-foreground-muted hover:text-red-600 flex items-center gap-1 font-semibold transition-colors shrink-0"
+              >
+                <RotateCcw className="w-3.5 h-3.5" /> Reset Checklist
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* SURAT JALAN DOCUMENT */}
@@ -187,7 +373,7 @@ Dokumen ini dihasilkan oleh Sistem PWA Stok Rafia UPL.`;
             <span>Berat: {sale.total_weight_kg.toFixed(1)} kg</span>
           </div>
 
-          {/* ROLL TABLE — 8 pasang [NO | KODE] per baris, urutan kiri ke kanan */}
+          {/* ROLL TABLE — 6 pasang [NO | KODE] per baris */}
           <div className="overflow-x-auto">
             <table className="sj-roll-table w-full text-xs border-collapse border border-gray-300">
               <thead className="bg-gray-50">
@@ -205,13 +391,35 @@ Dokumen ini dihasilkan oleh Sistem PWA Stok Rafia UPL.`;
                   <tr key={rowIdx}>
                     {row.map((item, colIdx) => {
                       const globalIdx = rowIdx * colPairs + colIdx + 1;
+                      const isFoundItem = lastSearchResult.status === "found" && lastSearchResult.item?.id === item?.id;
+                      const isChecked = item ? checkedIds.includes(item.id) : false;
+
                       return (
                         <React.Fragment key={colIdx}>
-                          <td className="col-no border border-gray-200 px-0.5 py-0 text-center text-gray-500 text-[10px]">
+                          <td className={`col-no border border-gray-200 px-0.5 py-0 text-center text-[10px] transition-colors ${
+                            isFoundItem
+                              ? "bg-amber-300 text-amber-950 font-bold"
+                              : isChecked
+                              ? "bg-emerald-200 text-emerald-950 font-bold"
+                              : "text-gray-500"
+                          }`}>
                             {item ? globalIdx : ""}
                           </td>
-                          <td className="col-code border border-gray-200 px-1 py-0 font-mono font-semibold text-[10px]">
-                            {item ? item.roll_code : ""}
+                          <td
+                            onClick={() => item && toggleCheckRoll(item.id)}
+                            title={item ? "Klik untuk tandai terverifikasi" : undefined}
+                            className={`col-code border border-gray-200 px-1 py-0 font-mono font-semibold text-[10px] cursor-pointer transition-colors ${
+                              isFoundItem
+                                ? "bg-amber-200 text-amber-950 ring-2 ring-amber-500 font-bold scale-[1.02]"
+                                : isChecked
+                                ? "bg-emerald-100 text-emerald-950 font-bold"
+                                : "hover:bg-gray-100"
+                            }`}
+                          >
+                            <span className="flex items-center justify-between gap-1">
+                              {item ? item.roll_code : ""}
+                              {isChecked && <Check className="w-3 h-3 text-emerald-600 shrink-0 print:hidden" />}
+                            </span>
                           </td>
                         </React.Fragment>
                       );
