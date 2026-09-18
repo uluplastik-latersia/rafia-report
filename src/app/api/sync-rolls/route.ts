@@ -29,10 +29,10 @@ export async function POST(request: Request) {
 
     for (const roll of rolls) {
       try {
-        // Check apakah roll sudah ada (duplikat prevention)
+        // Check apakah roll sudah ada (duplikat prevention: by id or by roll_code)
         const existing = await db.execute({
-          sql: `SELECT id FROM rolls WHERE id = ?`,
-          args: [roll.id],
+          sql: `SELECT id FROM rolls WHERE id = ? OR roll_code = ?`,
+          args: [roll.id, roll.roll_code],
         });
 
         if (existing.rows.length > 0) {

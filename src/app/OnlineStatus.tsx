@@ -23,8 +23,23 @@ export function OnlineStatus() {
 
     refreshCount();
 
-    const handleOnline = () => { setIsOnline(true); refreshCount(); };
-    const handleOffline = () => { setIsOnline(false); };
+    let offlineTimer: NodeJS.Timeout | null = null;
+
+    const handleOnline = () => {
+      if (offlineTimer) clearTimeout(offlineTimer);
+      setIsOnline(true);
+      refreshCount();
+    };
+
+    const handleOffline = () => {
+      if (offlineTimer) clearTimeout(offlineTimer);
+      // Debounce 3.5 detik untuk meredam micro-drop sinyal di pabrik
+      offlineTimer = setTimeout(() => {
+        if (!navigator.onLine) {
+          setIsOnline(false);
+        }
+      }, 3500);
+    };
 
     // Listen for sync completion from SW
     const handleSWMessage = (event: MessageEvent) => {
@@ -41,6 +56,7 @@ export function OnlineStatus() {
     const interval = setInterval(refreshCount, 5000);
 
     return () => {
+      if (offlineTimer) clearTimeout(offlineTimer);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       navigator.serviceWorker?.removeEventListener("message", handleSWMessage);

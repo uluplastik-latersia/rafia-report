@@ -102,14 +102,24 @@ export function useSyncManager() {
     setIsOnline(navigator.onLine);
     refreshPendingCount();
 
+    let offlineTimer: NodeJS.Timeout | null = null;
+
     // Event handlers
     const handleOnline = () => {
+      if (offlineTimer) clearTimeout(offlineTimer);
       setIsOnline(true);
       // Auto-sync saat kembali online (fallback untuk Safari)
       syncNow();
     };
+
     const handleOffline = () => {
-      setIsOnline(false);
+      if (offlineTimer) clearTimeout(offlineTimer);
+      // Debounce 3.5 detik untuk menghindari false offline saat sinyal micro-drop
+      offlineTimer = setTimeout(() => {
+        if (!navigator.onLine) {
+          setIsOnline(false);
+        }
+      }, 3500);
     };
 
     // Listen SW messages (Background Sync completed)
@@ -125,6 +135,7 @@ export function useSyncManager() {
     navigator.serviceWorker?.addEventListener("message", handleSWMessage);
 
     return () => {
+      if (offlineTimer) clearTimeout(offlineTimer);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       navigator.serviceWorker?.removeEventListener("message", handleSWMessage);

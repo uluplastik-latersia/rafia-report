@@ -5,7 +5,7 @@ import { openShift } from "@/actions/shift";
 import { submitRoll, deleteRoll } from "@/actions/inbound";
 import { upsertMachineWaste } from "@/actions/waste";
 import { useRouter } from "next/navigation";
-import { Save, Trash2, Box, RotateCcw, X, LogOut, WifiOff, Clock } from "lucide-react";
+import { Save, Trash2, Box, RotateCcw, X, LogOut, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { addPendingRoll, getPendingRolls, removePendingRoll, addPendingWaste, type PendingRoll } from "@/lib/offlineDb";
 import { useSyncManager } from "@/lib/useSyncManager";
 
@@ -41,7 +41,8 @@ export default function ShiftClient({
 
   // Offline State
   const [offlinePendingRolls, setOfflinePendingRolls] = useState<PendingRoll[]>([]);
-  const [offlineNotification, setOfflineNotification] = useState<string | null>(null);
+  const [offlineNotice, setOfflineNotice] = useState<{ weight: number; rollCode: string } | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<{ weight: number; rollCode: string; elapsedSec: number } | null>(null);
   const [operatorCode, setOperatorCode] = useState<string>("");
 
   // State Waste Sementara (untuk UI & debouncing auto-save)
@@ -178,44 +179,68 @@ export default function ShiftClient({
     }, 1500);
   };
 
-  // Handler Simpan Roll (with offline fallback)
+  // Handler Simpan Roll (with Duplicate Guard & Offline Fallback)
   const handleSaveRoll = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!weightStr || !operatorCode) return;
 
-    setLoading(true);
     const weight = parseFloat(weightStr);
     if (isNaN(weight) || weight <= 0) {
       alert("Berat tidak valid!");
-      setLoading(false);
       return;
     }
 
-    const rollData = {
+    // 1. DUPLICATE GUARD: Cek apakah ada roll dengan bobot sama di mesin ini dalam 3 menit terakhir (180 detik)
+    const now = Date.now();
+    const recentDuplicate = allMachineRolls.find(r => {
+      if (Math.abs(r.weight_kg - weight) < 0.05) {
+        const rollTime = new Date(r.created_at).getTime();
+        const diffSec = (now - rollTime) / 1000;
+        return diffSec >= 0 && diffSec < 180; // Di bawah 3 menit
+      }
+      return false;
+    });
+
+    if (recentDuplicate) {
+      const elapsedSec = Math.max(1, Math.round((now - new Date(recentDuplicate.created_at).getTime()) / 1000));
+      setDuplicateWarning({
+        weight,
+        rollCode: recentDuplicate.roll_code,
+        elapsedSec,
+      });
+      return;
+    }
+
+    await executeSaveRoll(weight);
+  };
+
+  const executeSaveRoll = async (weight: number) => {
+    setLoading(true);
+
+    // KUNCI IDEMPOTENCY: Generate ID dan RollCode SATU KALI di client
+    const rollId = crypto.randomUUID();
+    const rollCode = `${generateRandomLetters()}-${weight}-${operatorCode}`;
+
+    const rollData: PendingRoll = {
+      id: rollId,
+      roll_code: rollCode,
       weight_kg: weight,
       operator_code: operatorCode,
       machine_number: activeMachine,
       session_id: activeShift.id,
+      created_at: new Date().toISOString(),
     };
 
-    // === OFFLINE PATH ===
+    // === OFFLINE PATH (navigator.onLine === false) ===
     if (!navigator.onLine) {
       try {
-        const rollId = crypto.randomUUID();
-        const rollCode = `${generateRandomLetters()}-${weight}-${operatorCode}`;
-        const pendingRoll: PendingRoll = {
-          id: rollId,
-          roll_code: rollCode,
-          ...rollData,
-          created_at: new Date().toISOString(),
-        };
-        await addPendingRoll(pendingRoll);
+        await addPendingRoll(rollData);
         await registerBackgroundSync("sync-rolls");
         await refreshPendingCount();
-        setOfflinePendingRolls(prev => [pendingRoll, ...prev]);
+        setOfflinePendingRolls(prev => [rollData, ...prev]);
         setWeightStr("");
-        setOfflineNotification("Sinyal terputus. Data tersimpan di HP (Menunggu Sinkronisasi) 💾");
-        setTimeout(() => setOfflineNotification(null), 5000);
+        setOfflineNotice({ weight, rollCode });
+        setTimeout(() => setOfflineNotice(null), 7000);
       } catch (err: any) {
         alert("Gagal menyimpan data offline: " + err.message);
       } finally {
@@ -229,28 +254,31 @@ export default function ShiftClient({
       await submitRoll(rollData);
       setWeightStr("");
     } catch (err: any) {
-      // Fallback: mungkin koneksi terputus saat mengirim
+      // Fallback: jika request timeout / putus di jalan, simpan ID & rollCode yang SAMA ke IndexedDB
       try {
-        const rollId = crypto.randomUUID();
-        const rollCode = `${generateRandomLetters()}-${weight}-${operatorCode}`;
-        const pendingRoll: PendingRoll = {
-          id: rollId,
-          roll_code: rollCode,
-          ...rollData,
-          created_at: new Date().toISOString(),
-        };
-        await addPendingRoll(pendingRoll);
+        await addPendingRoll(rollData);
         await registerBackgroundSync("sync-rolls");
         await refreshPendingCount();
-        setOfflinePendingRolls(prev => [pendingRoll, ...prev]);
+        setOfflinePendingRolls(prev => [rollData, ...prev]);
         setWeightStr("");
-        setOfflineNotification("Sinyal terputus. Data tersimpan di HP (Menunggu Sinkronisasi) 💾");
-        setTimeout(() => setOfflineNotification(null), 5000);
+        setOfflineNotice({ weight, rollCode });
+        setTimeout(() => setOfflineNotice(null), 7000);
       } catch (fallbackErr: any) {
         alert("Error: " + err.message);
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeletePendingRoll = async (pendingId: string) => {
+    if (!confirm("Batalkan & hapus antrean timbangan ini dari memori HP?")) return;
+    try {
+      await removePendingRoll(pendingId);
+      setOfflinePendingRolls(prev => prev.filter(r => r.id !== pendingId));
+      await refreshPendingCount();
+    } catch (err: any) {
+      alert("Gagal menghapus antrean offline: " + err.message);
     }
   };
 
@@ -329,19 +357,66 @@ export default function ShiftClient({
         </button>
       </div>
 
-      {/* OFFLINE NOTIFICATION BANNER */}
-      {offlineNotification && (
-        <div className="bg-amber-50 border-2 border-amber-400 rounded-xl p-3 flex items-center gap-3 animate-slide-down">
-          <WifiOff className="w-5 h-5 text-amber-600 flex-shrink-0" />
-          <p className="text-sm font-medium text-amber-800">{offlineNotification}</p>
+      {/* MODAL DUPLICATE WARNING */}
+      {duplicateWarning && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-surface w-full max-w-sm rounded-2xl p-6 shadow-2xl border-2 border-amber-400 relative">
+            <div className="w-14 h-14 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-3">
+              <AlertTriangle className="w-8 h-8 text-amber-600" />
+            </div>
+            <h3 className="text-lg font-bold text-center text-foreground mb-1">
+              Peringatan: Timbangan Kembar
+            </h3>
+            <p className="text-sm text-foreground-muted text-center mb-3">
+              Mesin <span className="font-bold text-primary">{activeMachine}</span> baru saja mencatat timbangan <span className="font-bold text-primary">{duplicateWarning.weight} kg</span> sekitar <span className="font-bold text-amber-600">{duplicateWarning.elapsedSec} detik yang lalu</span>.
+            </p>
+            <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs text-amber-900 mb-5 text-center leading-relaxed">
+              💡 <strong>Roll sebelumnya ({duplicateWarning.rollCode}) sudah aman tersimpan.</strong> Jika Anda hanya ingin memastikan data masuk, silakan tekan <strong>Batal</strong>.
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setDuplicateWarning(null)}
+                className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-foreground font-bold rounded-xl active:scale-95 transition-all text-sm cursor-pointer shadow-sm"
+              >
+                ❌ Batal (Cek Lagi)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const w = duplicateWarning.weight;
+                  setDuplicateWarning(null);
+                  executeSaveRoll(w);
+                }}
+                className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl active:scale-95 transition-all text-sm cursor-pointer shadow-sm"
+              >
+                ⚠️ Ya, Roll Baru
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* OFFLINE STATUS BAR */}
+      {/* OFFLINE SUCCESS NOTICE BANNER (MENENANGKAN & EDUKATIF) */}
+      {offlineNotice && (
+        <div className="bg-emerald-50 border-2 border-emerald-400 rounded-xl p-3.5 flex items-start gap-3 shadow-md animate-slide-down">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-emerald-900">
+              Timbangan {offlineNotice.weight} kg Tersimpan Aman di HP! 💾
+            </p>
+            <p className="text-xs text-emerald-700 mt-0.5 leading-relaxed">
+              Kode: <span className="font-mono font-bold">{offlineNotice.rollCode}</span>. Data aman di memori HP dan otomatis terkirim saat sinyal kembali stabil. <strong>Jangan diinput ulang.</strong>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* OFFLINE STATUS BAR (TENANG & JELAS) */}
       {!isOnline && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-2 flex items-center justify-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse-slow" />
-          <span className="text-xs font-semibold text-red-700">Mode Offline — Data akan otomatis tersinkronisasi saat sinyal kembali</span>
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-2.5 flex items-center justify-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse-slow" />
+          <span className="text-xs font-semibold text-blue-800">Mode Simpan Offline Aktif — Timbangan tetap bisa diinput & tersimpan aman di memori HP</span>
         </div>
       )}
 
@@ -482,23 +557,33 @@ export default function ShiftClient({
             {pendingMachineRolls.map((roll) => (
               <div
                 key={roll.id}
-                className="p-3 rounded-xl border-2 border-dashed border-amber-300 bg-amber-50/60 flex items-center justify-between shadow-sm"
+                className="p-3 rounded-xl border-2 border-dashed border-amber-300 bg-amber-50/70 flex items-center justify-between shadow-sm"
               >
                 <div>
-                  <h4 className="font-mono font-bold text-amber-700 flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5" />
+                  <h4 className="font-mono font-bold text-amber-800 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-amber-600" />
                     {roll.roll_code}
                   </h4>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <p className="text-xs text-amber-600">Op: {roll.operator_code}</p>
+                    <p className="text-xs text-amber-700">Op: {roll.operator_code}</p>
                     <span className="text-[10px] bg-amber-200 text-amber-800 px-1.5 py-0.5 rounded-sm font-bold">
-                      ⏳ Menunggu Sinkronisasi
+                      ⏳ Tersimpan di HP (Antre Kirim)
                     </span>
                   </div>
                 </div>
-                <span className="font-black text-lg text-amber-700">
-                  {roll.weight_kg} <span className="text-xs font-normal opacity-70">kg</span>
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="font-black text-lg text-amber-800">
+                    {roll.weight_kg} <span className="text-xs font-normal opacity-70">kg</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleDeletePendingRoll(roll.id)}
+                    title="Batalkan & hapus antrean timbangan ini dari memori HP"
+                    className="p-2 text-danger/80 hover:bg-danger/10 hover:text-danger rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             ))}
 

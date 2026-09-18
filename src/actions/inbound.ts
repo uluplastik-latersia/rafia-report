@@ -19,13 +19,22 @@ export async function submitRoll(data: {
   operator_code: string;
   machine_number: number;
   session_id: string;
+  id?: string;
+  roll_code?: string;
 }) {
-  const rollId = uuidv4();
-  
-  // Format Kode: [3 Random]-[Weight]-[OpCode]
-  const rnd = generateRandomLetters();
+  const rollId = data.id || uuidv4();
   const rawWeight = data.weight_kg;
-  const rollCode = `${rnd}-${rawWeight}-${data.operator_code}`;
+  const rollCode = data.roll_code || `${generateRandomLetters()}-${rawWeight}-${data.operator_code}`;
+
+  // Idempotency check: jika roll dengan ID atau roll_code ini sudah ada (misal akibat retry network timeout), jangan insert ulang!
+  const existing = await db.execute({
+    sql: `SELECT id FROM rolls WHERE id = ? OR roll_code = ?`,
+    args: [rollId, rollCode],
+  });
+
+  if (existing.rows.length > 0) {
+    return { success: true, rollCode, duplicateSkipped: true };
+  }
 
   // 1. Insert ke tabel rolls dan update stok dalam 1 Batch HTTP Request
   await db.batch([
