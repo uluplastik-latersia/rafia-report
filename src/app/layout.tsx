@@ -15,6 +15,11 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "STOK RAFIA UPL",
   description: "Aplikasi PWA Manajemen Produksi & Stok Rafia",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/icons/icon-192x192.png",
+    apple: "/icons/icon-192x192.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
