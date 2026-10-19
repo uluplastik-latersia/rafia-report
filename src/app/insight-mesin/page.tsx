@@ -16,7 +16,7 @@ function parseWkt(dbDate: string | null) {
 }
 
 export default async function InsightMesinPage() {
-  const data = await getShiftMachineInsights(25);
+  const data = await getShiftMachineInsights(100);
 
   return (
     <div className="space-y-6 pb-12 w-full lg:max-w-6xl xl:max-w-[95%] 2xl:max-w-[1800px] mx-auto px-4 lg:px-8">

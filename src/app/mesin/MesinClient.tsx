@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { 
   Cpu, 
   BarChart2, 
@@ -11,20 +11,52 @@ import {
   Clock, 
   User, 
   RefreshCw,
-  Sparkles,
-  Calendar
+  Calendar,
+  Filter,
+  Layers,
+  ChevronDown
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import type { ShiftInsightDashboardData } from "@/actions/insights";
+import type { ShiftInsightDashboardData, ShiftInsightDetail } from "@/actions/insights";
 
-// Helper waktu Indonesia WIB
+// Helper konversi format DB UTC ke WIB
+function getTzDate(dbStr: string | null) {
+  const safeDateStr = dbStr ? (dbStr.includes("T") ? dbStr : dbStr.replace(" ", "T") + "Z") : new Date().toISOString();
+  return new Date(safeDateStr);
+}
+
 function parseWkt(dbDate: string | null) {
   if (!dbDate) return { d: "-", t: "-" };
-  const safeIso = dbDate.includes("T") ? dbDate : dbDate.replace(" ", "T") + "Z";
-  const dt = new Date(safeIso);
+  const dt = getTzDate(dbDate);
   const d = dt.toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "short", year: "numeric" });
   const t = dt.toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit", hour12: false });
   return { d, t };
+}
+
+// Helper ekstraksi metadata waktu untuk pengelompokan
+function getShiftDateMeta(shift: ShiftInsightDetail) {
+  const dt = getTzDate(shift.dateOpened);
+  const year = dt.toLocaleString("id-ID", { timeZone: "Asia/Jakarta", year: "numeric" });
+  const month = dt.toLocaleString("id-ID", { timeZone: "Asia/Jakarta", month: "long" });
+  const dayName = dt.toLocaleString("id-ID", { timeZone: "Asia/Jakarta", weekday: "long" });
+  const dayDate = dt.toLocaleString("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "short", year: "numeric" });
+
+  // Hitung minggu ke-N dalam bulan (Senin = awal minggu)
+  const localParts = dt.toLocaleString("en-US", { timeZone: "Asia/Jakarta", year: "numeric", month: "numeric", day: "numeric" }).split("/");
+  const localDate = new Date(Number(localParts[2]), Number(localParts[0]) - 1, Number(localParts[1]));
+  const dayOfMonth = localDate.getDate();
+  const firstOfMonth = new Date(localDate.getFullYear(), localDate.getMonth(), 1);
+  const firstDayAdj = firstOfMonth.getDay() === 0 ? 6 : firstOfMonth.getDay() - 1;
+  const weekNum = Math.ceil((dayOfMonth + firstDayAdj) / 7);
+
+  return {
+    year,
+    month,
+    weekKey: `Minggu ke-${weekNum} (${month} ${year})`,
+    monthKey: `${month} ${year}`,
+    yearKey: `Tahun ${year}`,
+    dayKey: `${dayName}, ${dayDate}`,
+  };
 }
 
 export default function MesinClient({
@@ -46,13 +78,17 @@ export default function MesinClient({
   const [activeTab, setActiveTab] = useState<"shift" | "insight">("shift");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Filter Mode: "all" | "date" | "week" | "month" | "year"
+  const [filterMode, setFilterMode] = useState<"all" | "date" | "week" | "month" | "year">("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+
   const handleRefresh = () => {
     setIsRefreshing(true);
     router.refresh();
     setTimeout(() => setIsRefreshing(false), 800);
   };
 
-  // Kalkulasi data shift saat ini
+  // Kalkulasi data shift saat ini (Tab 1)
   const totalRollsCount = rolls.length;
   const totalRollsKg = rolls.reduce((acc, r) => acc + r.weight_kg, 0);
   const totalQcFailed = rolls.filter((r) => r.weight_kg > 75.99);
@@ -64,7 +100,6 @@ export default function MesinClient({
     const mWaste = wastes.find((w) => w.machine_number === m) || { afalan_kg: 0, prongkalan_kg: 0 };
     const mQc = mRolls.filter((r) => r.weight_kg > 75.99);
 
-    // Operator mapping
     const opCodes = Array.from(new Set(mRolls.map((r) => r.operator_code).filter(Boolean)));
     const opNames = opCodes.map((code) => {
       const opObj = operators.find((o) => o.code === code);
@@ -88,9 +123,47 @@ export default function MesinClient({
   const shiftWkt = currentShift ? parseWkt(currentShift.date_opened) : { d: "-", t: "-" };
   const adminName = currentShift?.admin_name && currentShift?.admin_name !== "-" ? currentShift.admin_name : "Admin";
 
+  // ==================== DAFTAR PILIHAN KATEGORI UNTUK DROPDOWN ====================
+  const categoryOptions = useMemo(() => {
+    if (filterMode === "all") return [];
+
+    const set = new Set<string>();
+    insightsData.shiftDetails.forEach((shift) => {
+      const meta = getShiftDateMeta(shift);
+      if (filterMode === "date") set.add(meta.dayKey);
+      else if (filterMode === "week") set.add(meta.weekKey);
+      else if (filterMode === "month") set.add(meta.monthKey);
+      else if (filterMode === "year") set.add(meta.yearKey);
+    });
+
+    return Array.from(set);
+  }, [insightsData.shiftDetails, filterMode]);
+
+  // Reset dropdown terpilih saat mode filter berubah
+  const handleFilterModeChange = (mode: "all" | "date" | "week" | "month" | "year") => {
+    setFilterMode(mode);
+    setSelectedCategory("ALL");
+  };
+
+  // ==================== FILTER SHIFT DETAILS ====================
+  const filteredShifts = useMemo(() => {
+    if (filterMode === "all" || selectedCategory === "ALL") {
+      return insightsData.shiftDetails;
+    }
+
+    return insightsData.shiftDetails.filter((shift) => {
+      const meta = getShiftDateMeta(shift);
+      if (filterMode === "date") return meta.dayKey === selectedCategory;
+      if (filterMode === "week") return meta.weekKey === selectedCategory;
+      if (filterMode === "month") return meta.monthKey === selectedCategory;
+      if (filterMode === "year") return meta.yearKey === selectedCategory;
+      return true;
+    });
+  }, [insightsData.shiftDetails, filterMode, selectedCategory]);
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-16">
-      {/* HEADER KHUSUS SUB-PWA: MONITOR RAFIA */}
+      {/* HEADER SUB-PWA: MONITOR RAFIA */}
       <header className="bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-white shadow-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -403,110 +476,164 @@ export default function MesinClient({
               </p>
             </section>
 
-            {/* RIWAYAT DETAIL SHIFT KE SHIFT */}
+            {/* RIWAYAT DETAIL SHIFT KE SHIFT DENGAN FILTER DROPDOWN KATEGORI */}
             <section className="space-y-4">
-              <h2 className="text-sm font-bold text-slate-700 flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-slate-500" />
-                  Rincian Tiap Shift Operasional
-                </span>
-                <span className="text-xs text-slate-500">Terbaru di atas</span>
-              </h2>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-amber-600" />
+                    Rincian Tiap Shift Operasional
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Menampilkan {filteredShifts.length} dari {insightsData.shiftDetails.length} shift tercatat
+                  </p>
+                </div>
 
-              <div className="space-y-3.5">
-                {insightsData.shiftDetails.map((shift) => {
-                  const wkt = parseWkt(shift.dateOpened);
-                  return (
-                    <div
-                      key={shift.sessionId}
-                      className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-slate-200"
+                {/* DROPDOWN KATEGORI */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Pilihan Mode Pengkategorian */}
+                  <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+                    <span className="text-[11px] font-semibold text-slate-500 pl-2 pr-1 flex items-center gap-1">
+                      <Filter className="w-3 h-3 text-slate-400" /> Kategori:
+                    </span>
+                    <select
+                      value={filterMode}
+                      onChange={(e) => handleFilterModeChange(e.target.value as any)}
+                      aria-label="Pilih Jenis Kategori Waktu"
+                      className="bg-white border border-slate-200 text-xs font-bold text-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5 pb-2.5 border-b border-slate-100">
-                        <div className="flex items-center gap-2.5">
-                          <span className="bg-amber-500 text-white font-black px-3 py-1 rounded-xl text-xs">
-                            Shift {shift.shiftNumber}
-                          </span>
-                          <div>
-                            <h3 className="font-bold text-slate-800 text-sm">
-                              {wkt.d} <span className="text-slate-400 font-normal">({wkt.t} WIB)</span>
-                            </h3>
-                            <p className="text-[11px] text-slate-500">Admin: {shift.adminName}</p>
+                      <option value="all">Semua Shift</option>
+                      <option value="date">Per Tanggal</option>
+                      <option value="week">Per Minggu</option>
+                      <option value="month">Per Bulan</option>
+                      <option value="year">Per Tahun</option>
+                    </select>
+                  </div>
+
+                  {/* Dropdown Spesifik sesuai Kategori Terpilih */}
+                  {filterMode !== "all" && (
+                    <div className="flex items-center gap-1.5 bg-amber-50/80 border border-amber-200 p-1 rounded-xl animate-slide-down">
+                      <span className="text-[11px] font-semibold text-amber-900 pl-2 pr-1 flex items-center gap-1">
+                        <Layers className="w-3 h-3 text-amber-600" /> Pilih:
+                      </span>
+                      <select
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        aria-label="Pilih Periode Waktu Spesifik"
+                        className="bg-white border border-amber-300 text-xs font-bold text-amber-950 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer max-w-[200px] truncate"
+                      >
+                        <option value="ALL">Semua ({filterMode.toUpperCase()})</option>
+                        {categoryOptions.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {filteredShifts.length === 0 ? (
+                <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm">
+                  Tidak ada data shift untuk kategori yang dipilih.
+                </div>
+              ) : (
+                <div className="space-y-3.5">
+                  {filteredShifts.map((shift) => {
+                    const wkt = parseWkt(shift.dateOpened);
+                    return (
+                      <div
+                        key={shift.sessionId}
+                        className="bg-white rounded-2xl p-4 md:p-5 shadow-sm border border-slate-200 hover:border-amber-300 transition-colors"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5 pb-2.5 border-b border-slate-100">
+                          <div className="flex items-center gap-2.5">
+                            <span className="bg-amber-500 text-white font-black px-3 py-1 rounded-xl text-xs">
+                              Shift {shift.shiftNumber}
+                            </span>
+                            <div>
+                              <h3 className="font-bold text-slate-800 text-sm">
+                                {wkt.d} <span className="text-slate-400 font-normal">({wkt.t} WIB)</span>
+                              </h3>
+                              <p className="text-[11px] text-slate-500">Admin: {shift.adminName}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="bg-emerald-50 text-emerald-800 font-bold px-2.5 py-1 rounded-lg border border-emerald-200">
+                              Total: {shift.totalShiftProductionKg.toLocaleString("id-ID", { maximumFractionDigits: 1 })} kg ({shift.totalShiftRolls} roll)
+                            </span>
+                            {shift.totalShiftQcFailed > 0 && (
+                              <span className="bg-red-50 text-red-700 font-bold px-2 py-1 rounded-lg border border-red-200 flex items-center gap-1">
+                                <AlertCircle className="w-3.5 h-3.5" /> {shift.totalShiftQcFailed} QC
+                              </span>
+                            )}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 text-xs">
-                          <span className="bg-emerald-50 text-emerald-800 font-bold px-2.5 py-1 rounded-lg border border-emerald-200">
-                            Total: {shift.totalShiftProductionKg.toLocaleString("id-ID", { maximumFractionDigits: 1 })} kg ({shift.totalShiftRolls} roll)
-                          </span>
-                          {shift.totalShiftQcFailed > 0 && (
-                            <span className="bg-red-50 text-red-700 font-bold px-2 py-1 rounded-lg border border-red-200 flex items-center gap-1">
-                              <AlertCircle className="w-3.5 h-3.5" /> {shift.totalShiftQcFailed} QC
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2.5">
-                        {shift.machines.map((m) => {
-                          const isOperating = m.rollCount > 0 || m.productionKg > 0 || m.afalanKg > 0;
-                          return (
-                            <div
-                              key={m.machineNumber}
-                              className={`rounded-xl p-2.5 border ${
-                                isOperating
-                                  ? "bg-slate-50 border-slate-200"
-                                  : "bg-slate-50/30 border-slate-100 opacity-40"
-                              }`}
-                            >
-                              <div className="flex justify-between items-center mb-1 pb-1 border-b border-slate-200">
-                                <span className="font-black text-slate-800 text-xs">
-                                  M-{m.machineNumber}
-                                </span>
-                                {m.operators.length > 0 && (
-                                  <span className="text-[10px] text-slate-500 truncate max-w-[80px]" title={m.operators.join(", ")}>
-                                    {m.operators.join(", ")}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2.5">
+                          {shift.machines.map((m) => {
+                            const isOperating = m.rollCount > 0 || m.productionKg > 0 || m.afalanKg > 0;
+                            return (
+                              <div
+                                key={m.machineNumber}
+                                className={`rounded-xl p-2.5 border ${
+                                  isOperating
+                                    ? "bg-slate-50 border-slate-200"
+                                    : "bg-slate-50/30 border-slate-100 opacity-40"
+                                }`}
+                              >
+                                <div className="flex justify-between items-center mb-1 pb-1 border-b border-slate-200">
+                                  <span className="font-black text-slate-800 text-xs">
+                                    M-{m.machineNumber}
                                   </span>
-                                )}
-                              </div>
-
-                              {isOperating ? (
-                                <div className="space-y-0.5 text-xs">
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-[10px] text-slate-500">Hasil:</span>
-                                    <span className="font-bold text-emerald-700">
-                                      {m.productionKg.toLocaleString("id-ID", { maximumFractionDigits: 1 })} kg
+                                  {m.operators.length > 0 && (
+                                    <span className="text-[10px] text-slate-500 truncate max-w-[80px]" title={m.operators.join(", ")}>
+                                      {m.operators.join(", ")}
                                     </span>
-                                  </div>
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-[10px] text-slate-400">Roll:</span>
-                                    <span className="font-semibold text-blue-700">{m.rollCount}</span>
-                                  </div>
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-[10px] text-slate-500">Afalan:</span>
-                                    <span className="font-bold text-red-600">
-                                      {m.afalanKg.toLocaleString("id-ID", { maximumFractionDigits: 1 })} kg
-                                    </span>
-                                  </div>
-                                  {m.qcFailedCount > 0 && (
-                                    <div className="mt-1 pt-1 border-t border-red-200 flex justify-between items-center text-[10px] text-red-600 font-bold">
-                                      <span>QC &gt;76:</span>
-                                      <span>{m.qcFailedCount} roll</span>
-                                    </div>
                                   )}
                                 </div>
-                              ) : (
-                                <div className="py-2 text-center text-[10px] text-slate-400 italic">
-                                  Tidak jalan
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
+
+                                {isOperating ? (
+                                  <div className="space-y-0.5 text-xs">
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-[10px] text-slate-500">Hasil:</span>
+                                      <span className="font-bold text-emerald-700">
+                                        {m.productionKg.toLocaleString("id-ID", { maximumFractionDigits: 1 })} kg
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-[10px] text-slate-400">Roll:</span>
+                                      <span className="font-semibold text-blue-700">{m.rollCount}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-[10px] text-slate-500">Afalan:</span>
+                                      <span className="font-bold text-red-600">
+                                        {m.afalanKg.toLocaleString("id-ID", { maximumFractionDigits: 1 })} kg
+                                      </span>
+                                    </div>
+                                    {m.qcFailedCount > 0 && (
+                                      <div className="mt-1 pt-1 border-t border-red-200 flex justify-between items-center text-[10px] text-red-600 font-bold">
+                                        <span>QC &gt;76:</span>
+                                        <span>{m.qcFailedCount} roll</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="py-2 text-center text-[10px] text-slate-400 italic">
+                                    Tidak jalan
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
           </div>
         )}

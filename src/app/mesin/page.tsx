@@ -37,8 +37,8 @@ export default async function MesinPage() {
     operators = ops as any[];
   }
 
-  // 3. Ambil data insight mesin per shift (25 shift terakhir)
-  const shiftInsights = await getShiftMachineInsights(25);
+  // 3. Ambil data insight mesin per shift (100 shift terakhir untuk fleksibilitas filter)
+  const shiftInsights = await getShiftMachineInsights(100);
 
   return (
     <MesinClient
