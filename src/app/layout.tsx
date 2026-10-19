@@ -25,11 +25,8 @@ export const metadata: Metadata = {
   },
 };
 
-import pkg from "../../package.json";
 import { PwaRegister } from "./PwaRegister";
-import { OnlineStatus } from "./OnlineStatus";
-import Link from "next/link";
-import { Home } from "lucide-react";
+import { AppHeader } from "./AppHeader";
 
 export default function RootLayout({
   children,
@@ -40,21 +37,8 @@ export default function RootLayout({
     <html lang="id">
       <body className={`${inter.className} min-h-screen bg-background text-foreground pb-20`}>
         <PwaRegister />
-        {/* APP BAR (Header) */}
-        <header className="bg-primary text-white p-4 shadow-md sticky top-0 z-50 print:hidden">
-          <div className="w-full max-w-md lg:max-w-[95%] xl:max-w-[1800px] mx-auto flex items-center justify-between">
-            <h1 className="text-xl font-bold tracking-wide">📦 Rafia UPL</h1>
-            <div className="flex items-center gap-3">
-              <OnlineStatus />
-              <Link href="/" className="bg-white/20 p-2 rounded-full hover:bg-white/30 active:scale-95 transition-all text-white">
-                <Home className="w-4 h-4" />
-              </Link>
-              <div className="text-xs bg-white/20 px-2 py-1 rounded-full backdrop-blur-sm">
-                <span className="font-semibold">V {pkg.version}</span>
-              </div>
-            </div>
-          </div>
-        </header>
+        {/* APP BAR (Header) - Sembunyi otomatis saat di sub-PWA /mesin */}
+        <AppHeader />
 
         {/* MAIN CONTENT AREA */}
         <main className="w-full max-w-md lg:max-w-[95%] xl:max-w-[1800px] mx-auto p-4 lg:p-8 print:max-w-none print:w-full print:p-0">
