@@ -23,5 +23,14 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: 'maskable',
       },
     ],
+    shortcuts: [
+      {
+        name: 'Monitor Rafia',
+        short_name: 'Monitor Rafia',
+        description: 'Pantau hasil per mesin dan insight shift mesin',
+        url: '/mesin',
+        icons: [{ src: '/icons/icon-192x192.png', sizes: '192x192' }],
+      },
+    ],
   };
 }

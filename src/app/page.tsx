@@ -163,7 +163,7 @@ export default async function Dashboard() {
               </div>
               <div className="text-left">
                  <h3 className="font-bold text-gray-900 text-sm">Insight Mesin</h3>
-                 <p className="text-xs text-foreground-muted">Pantau rata-rata & performa harian per-mesin</p>
+                 <p className="text-xs text-foreground-muted">Pantau hasil produksi, afalan & QC per shift</p>
               </div>
             </div>
             <ArrowRight className="w-5 h-5 text-amber-600" />
