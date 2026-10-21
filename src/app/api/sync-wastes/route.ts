@@ -28,6 +28,18 @@ export async function POST(request: Request) {
 
     for (const waste of wastes) {
       try {
+        // Cek apakah sesi shift masih OPEN
+        const sessionCheck = await db.execute({
+          sql: `SELECT status FROM shift_sessions WHERE id = ?`,
+          args: [waste.session_id],
+        });
+
+        if (sessionCheck.rows.length === 0 || sessionCheck.rows[0].status !== "OPEN") {
+          // Abaikan waste dari sesi yang sudah ditutup, tapi bersihkan dari IndexedDB
+          syncedIds.push(waste.id);
+          continue;
+        }
+
         // Check if waste entry already exists for this machine & shift
         const check = await db.execute({
           sql: `SELECT id FROM machine_wastes WHERE session_id = ? AND machine_number = ?`,

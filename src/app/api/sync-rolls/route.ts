@@ -41,6 +41,40 @@ export async function POST(request: Request) {
           continue;
         }
 
+        // 1. LATE SYNC PROTECTION: Periksa apakah session_id masih OPEN
+        const sessionRes = await db.execute({
+          sql: `SELECT status FROM shift_sessions WHERE id = ?`,
+          args: [roll.session_id],
+        });
+
+        if (sessionRes.rows.length === 0 || sessionRes.rows[0].status !== "OPEN") {
+          console.warn(
+            `[SyncRolls] Late sync rejected: Roll ${roll.roll_code} (${roll.weight_kg} kg). Sesi ${roll.session_id} sudah DITUTUP. Roll dibuang agar tidak menjadi roll hantu.`
+          );
+          // Tetap tandai syncedIds agar dihapus dari IndexedDB klien sehingga tidak loop sync
+          syncedIds.push(roll.id);
+          continue;
+        }
+
+        // 2. COOLDOWN LOCK PROTECTION: Cegah double sync kembar dalam 90 detik
+        const cooldownCheck = await db.execute({
+          sql: `SELECT id, roll_code FROM rolls 
+                WHERE session_id = ? 
+                  AND machine_number = ? 
+                  AND ABS(weight_kg - ?) < 0.05 
+                  AND (strftime('%s', 'now') - strftime('%s', created_at)) < 90
+                LIMIT 1`,
+          args: [roll.session_id, roll.machine_number, roll.weight_kg],
+        });
+
+        if (cooldownCheck.rows.length > 0) {
+          console.warn(
+            `[SyncRolls] Cooldown lock rejected: Roll kembar ${roll.roll_code} pada mesin ${roll.machine_number} diabaikan.`
+          );
+          syncedIds.push(roll.id);
+          continue;
+        }
+
         // BATCH: Insert roll + update stok (sama dengan submitRoll server action)
         await db.batch([
           {

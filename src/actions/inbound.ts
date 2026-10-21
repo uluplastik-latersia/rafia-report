@@ -36,7 +36,37 @@ export async function submitRoll(data: {
     return { success: true, rollCode, duplicateSkipped: true };
   }
 
-  // 1. Insert ke tabel rolls dan update stok dalam 1 Batch HTTP Request
+  // 1. Session check: pastikan sesi shift masih OPEN (Cegah Late Sync & Ghost Roll pada shift tertutup)
+  const sessionCheck = await db.execute({
+    sql: `SELECT status FROM shift_sessions WHERE id = ?`,
+    args: [data.session_id],
+  });
+
+  if (sessionCheck.rows.length === 0 || sessionCheck.rows[0].status !== "OPEN") {
+    throw new Error("Sesi shift ini sudah ditutup atau tidak aktif. Input roll ditolak.");
+  }
+
+  // 2. Cooldown Lock: Blokir jika mesin yang sama mencatat bobot yang sama (<0.05 kg) dalam kurun waktu 90 detik
+  const cooldownCheck = await db.execute({
+    sql: `SELECT roll_code, (strftime('%s', 'now') - strftime('%s', created_at)) as diff_sec
+          FROM rolls 
+          WHERE session_id = ? 
+            AND machine_number = ? 
+            AND ABS(weight_kg - ?) < 0.05 
+            AND (strftime('%s', 'now') - strftime('%s', created_at)) < 90
+          ORDER BY created_at DESC 
+          LIMIT 1`,
+    args: [data.session_id, data.machine_number, rawWeight],
+  });
+
+  if (cooldownCheck.rows.length > 0) {
+    const prevRoll = cooldownCheck.rows[0];
+    throw new Error(
+      `Cooldown Lock Aktif: Roll serupa (${prevRoll.roll_code}) baru saja tersimpan ${prevRoll.diff_sec} detik lalu di Mesin ${data.machine_number}. Input kembar dicegah demi akurasi stok.`
+    );
+  }
+
+  // 3. Insert ke tabel rolls dan update stok dalam 1 Batch HTTP Request
   await db.batch([
     {
       sql: `INSERT INTO rolls (id, roll_code, weight_kg, operator_code, machine_number, session_id, status)

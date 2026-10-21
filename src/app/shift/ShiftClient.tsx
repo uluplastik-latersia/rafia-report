@@ -5,7 +5,7 @@ import { openShift } from "@/actions/shift";
 import { submitRoll, deleteRoll } from "@/actions/inbound";
 import { upsertMachineWaste } from "@/actions/waste";
 import { useRouter } from "next/navigation";
-import { Save, Trash2, Box, RotateCcw, X, LogOut, Clock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Save, Trash2, Box, RotateCcw, X, LogOut, Clock, AlertTriangle, CheckCircle2, Lock } from "lucide-react";
 import { addPendingRoll, getPendingRolls, removePendingRoll, addPendingWaste, type PendingRoll } from "@/lib/offlineDb";
 import { useSyncManager } from "@/lib/useSyncManager";
 
@@ -42,7 +42,12 @@ export default function ShiftClient({
   // Offline State
   const [offlinePendingRolls, setOfflinePendingRolls] = useState<PendingRoll[]>([]);
   const [offlineNotice, setOfflineNotice] = useState<{ weight: number; rollCode: string } | null>(null);
-  const [duplicateWarning, setDuplicateWarning] = useState<{ weight: number; rollCode: string; elapsedSec: number } | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<{
+    weight: number;
+    rollCode: string;
+    elapsedSec: number;
+    isLocked: boolean;
+  } | null>(null);
   const [operatorCode, setOperatorCode] = useState<string>("");
 
   // State Waste Sementara (untuk UI & debouncing auto-save)
@@ -60,14 +65,22 @@ export default function ShiftClient({
   const [karyawan, setKaryawan] = useState(0);
   const [afalanPeletSak, setAfalanPeletSak] = useState(0);
 
-  // Load pending rolls dari IndexedDB
+  // Load pending rolls dari IndexedDB & auto-purge stale rolls dari shift lampau
   const loadPendingRolls = useCallback(async () => {
     if (!activeShift) return;
     try {
       const pending = await getPendingRolls();
+      // Bersihkan roll usang dari sesi shift sebelumnya yang sudah tertutup
+      const stale = pending.filter(r => r.session_id !== activeShift.id);
+      if (stale.length > 0) {
+        for (const r of stale) {
+          await removePendingRoll(r.id);
+        }
+        await refreshPendingCount();
+      }
       setOfflinePendingRolls(pending.filter(r => r.session_id === activeShift.id));
     } catch { /* IndexedDB belum tersedia */ }
-  }, [activeShift]);
+  }, [activeShift, refreshPendingCount]);
 
   // Inisialisasi Waste State dari Server Data
   useEffect(() => {
@@ -190,7 +203,7 @@ export default function ShiftClient({
       return;
     }
 
-    // 1. DUPLICATE GUARD: Cek apakah ada roll dengan bobot sama di mesin ini dalam 3 menit terakhir (180 detik)
+    // 1. DUPLICATE GUARD & COOLDOWN LOCK: Cek apakah ada roll dengan bobot sama di mesin ini dalam 3 menit terakhir (180 detik)
     const now = Date.now();
     const recentDuplicate = allMachineRolls.find(r => {
       if (Math.abs(r.weight_kg - weight) < 0.05) {
@@ -203,10 +216,12 @@ export default function ShiftClient({
 
     if (recentDuplicate) {
       const elapsedSec = Math.max(1, Math.round((now - new Date(recentDuplicate.created_at).getTime()) / 1000));
+      const isLocked = elapsedSec < 90; // Hard cooldown lock jika di bawah 90 detik
       setDuplicateWarning({
         weight,
         rollCode: recentDuplicate.roll_code,
         elapsedSec,
+        isLocked,
       });
       return;
     }
@@ -254,7 +269,15 @@ export default function ShiftClient({
       await submitRoll(rollData);
       setWeightStr("");
     } catch (err: any) {
-      // Fallback: jika request timeout / putus di jalan, simpan ID & rollCode yang SAMA ke IndexedDB
+      const errorMsg = err.message || "";
+      // Jika error adalah penolakan resmi dari server (Cooldown Lock atau Sesi Shift Tertutup), jangan simpan ke offline!
+      if (errorMsg.includes("Cooldown Lock") || errorMsg.includes("sudah ditutup") || errorMsg.includes("ditolak")) {
+        alert("⚠️ " + errorMsg);
+        setLoading(false);
+        return;
+      }
+
+      // Fallback: jika request timeout / putus koneksi di jalan, simpan ke IndexedDB
       try {
         await addPendingRoll(rollData);
         await registerBackgroundSync("sync-rolls");
@@ -293,7 +316,19 @@ export default function ShiftClient({
 
   const handleCloseShift = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!confirm("Tutup shift ini secara permanen? Stok HR dan Global akan terarsip.")) return;
+
+    // Pencegahan Late Sync / Orphan Roll: Cek apakah masih ada timbangan offline yang belum tersinkron
+    if (offlinePendingRolls.length > 0) {
+      const confirmStale = confirm(
+        `⚠️ PERHATIAN: Masih ada ${offlinePendingRolls.length} timbangan offline yang belum tersinkron ke server!\n\n` +
+        `Jika shift ditutup sekarang, data offline tersebut akan dibersihkan agar tidak menjadi roll hantu.\n\n` +
+        `Apakah Anda yakin ingin menutup shift sekarang?`
+      );
+      if (!confirmStale) return;
+    } else {
+      if (!confirm("Tutup shift ini secara permanen? Stok HR dan Global akan terarsip.")) return;
+    }
+
     setLoading(true);
     try {
       import('@/actions/shift').then(async ({ closeShift }) => {
@@ -307,6 +342,13 @@ export default function ShiftClient({
           karyawan: karyawan,
           afalanPeletSak: afalanPeletSak
         });
+
+        // Bersihkan pending rolls shift ini dari IndexedDB
+        for (const r of offlinePendingRolls) {
+          await removePendingRoll(r.id);
+        }
+        await refreshPendingCount();
+
         setIsClosingModalOpen(false);
         startTransition(() => {
           router.push(`/ringkasan/${activeShift.id}`);
@@ -357,42 +399,82 @@ export default function ShiftClient({
         </button>
       </div>
 
-      {/* MODAL DUPLICATE WARNING */}
+      {/* MODAL DUPLICATE WARNING / COOLDOWN LOCK */}
       {duplicateWarning && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="bg-surface w-full max-w-sm rounded-2xl p-6 shadow-2xl border-2 border-amber-400 relative">
-            <div className="w-14 h-14 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-3">
-              <AlertTriangle className="w-8 h-8 text-amber-600" />
+          <div className={`bg-surface w-full max-w-sm rounded-2xl p-6 shadow-2xl border-2 relative ${
+            duplicateWarning.isLocked ? "border-red-500" : "border-amber-400"
+          }`}>
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 ${
+              duplicateWarning.isLocked ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"
+            }`}>
+              {duplicateWarning.isLocked ? (
+                <Lock className="w-8 h-8 text-red-600 animate-pulse" />
+              ) : (
+                <AlertTriangle className="w-8 h-8 text-amber-600" />
+              )}
             </div>
-            <h3 className="text-lg font-bold text-center text-foreground mb-1">
-              Peringatan: Timbangan Kembar
+
+            <h3 className={`text-lg font-bold text-center mb-1 ${
+              duplicateWarning.isLocked ? "text-red-600" : "text-foreground"
+            }`}>
+              {duplicateWarning.isLocked ? "Kunci Timbangan Kembar (Cooldown)" : "Peringatan: Timbangan Mirip"}
             </h3>
+
             <p className="text-sm text-foreground-muted text-center mb-3">
-              Mesin <span className="font-bold text-primary">{activeMachine}</span> baru saja mencatat timbangan <span className="font-bold text-primary">{duplicateWarning.weight} kg</span> sekitar <span className="font-bold text-amber-600">{duplicateWarning.elapsedSec} detik yang lalu</span>.
+              Mesin <span className="font-bold text-foreground">{activeMachine}</span> baru saja mencatat timbangan{" "}
+              <span className="font-bold text-primary">{duplicateWarning.weight} kg</span> sekitar{" "}
+              <span className={`font-bold ${duplicateWarning.isLocked ? "text-red-600" : "text-amber-600"}`}>
+                {duplicateWarning.elapsedSec} detik yang lalu
+              </span>.
             </p>
-            <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs text-amber-900 mb-5 text-center leading-relaxed">
-              💡 <strong>Roll sebelumnya ({duplicateWarning.rollCode}) sudah aman tersimpan.</strong> Jika Anda hanya ingin memastikan data masuk, silakan tekan <strong>Batal</strong>.
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setDuplicateWarning(null)}
-                className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-foreground font-bold rounded-xl active:scale-95 transition-all text-sm cursor-pointer shadow-sm"
-              >
-                ❌ Batal (Cek Lagi)
-              </button>
+
+            {duplicateWarning.isLocked ? (
+              <div className="bg-red-50 p-3.5 rounded-xl border border-red-200 text-xs text-red-900 mb-5 text-center leading-relaxed">
+                🔒 <strong>INPUT DIKUNCI OTOMATIS:</strong> Roll sebelumnya (<span className="font-mono font-bold">{duplicateWarning.rollCode}</span>) sudah aman tersimpan. Mesin rafia mustahil mengeluarkan roll baru secepat ini. Mohon cek fisik timbangan.
+                <div className="mt-2 text-[11px] font-bold text-red-700 bg-red-100/80 py-1 px-2 rounded-lg">
+                  Sisa Cooldown: {Math.max(1, 90 - duplicateWarning.elapsedSec)} detik
+                </div>
+              </div>
+            ) : (
+              <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs text-amber-900 mb-5 text-center leading-relaxed">
+                💡 Roll sebelumnya (<span className="font-mono font-bold">{duplicateWarning.rollCode}</span>) sudah aman tersimpan. Jika ini roll fisik yang berbeda, tekan konfirmasi di bawah.
+              </div>
+            )}
+
+            {duplicateWarning.isLocked ? (
               <button
                 type="button"
                 onClick={() => {
-                  const w = duplicateWarning.weight;
                   setDuplicateWarning(null);
-                  executeSaveRoll(w);
+                  setWeightStr("");
                 }}
-                className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl active:scale-95 transition-all text-sm cursor-pointer shadow-sm"
+                className="w-full py-3.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl active:scale-95 transition-all text-sm cursor-pointer shadow-md"
               >
-                ⚠️ Ya, Roll Baru
+                Saya Mengerti (Cek Fisik)
               </button>
-            </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDuplicateWarning(null)}
+                  className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-foreground font-bold rounded-xl active:scale-95 transition-all text-sm cursor-pointer shadow-sm"
+                >
+                  ❌ Batal (Cek Lagi)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const w = duplicateWarning.weight;
+                    setDuplicateWarning(null);
+                    executeSaveRoll(w);
+                  }}
+                  className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl active:scale-95 transition-all text-sm cursor-pointer shadow-sm"
+                >
+                  ⚠️ Ya, Roll Baru
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
